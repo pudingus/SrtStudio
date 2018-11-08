@@ -18,10 +18,8 @@ namespace SrtStudio
     /// <summary>
     /// Interaction logic for Timeline.xaml
     /// </summary>
-    public partial class Timeline : UserControl
-    {
-        public Timeline()
-        {
+    public partial class Timeline : UserControl {
+        public Timeline() {
             InitializeComponent();
         }
 
@@ -50,35 +48,41 @@ namespace SrtStudio
 
 
 
-        bool draggingEnd = false;
-        bool draggingStart = false;
-        bool draggingMid = false;
+        //bool draggingEnd = false;
+        //bool draggingStart = false;
+        //bool draggingMid = false;
 
 
-        Point point;
-        private void UserControl_MouseMove(object sender, MouseEventArgs e) {
-
-        }
 
         private void UserControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            Point pointd;
-            pointd = e.GetPosition(grid1);
-            //point = e.GetPosition(wrap1);
-            Console.WriteLine("pre mouse lb down");
-            if (pointd.X >= grid1.Width - 5 && pointd.X <= grid1.Width + 5) {
-                draggingEnd = true;
-            }
-            else if (pointd.X >= -5 && pointd.X <= 5) {
-                draggingStart = true;
-            }
-            else draggingMid = true;
+            //Point pointd;
+            //pointd = e.GetPosition(wrap1);
+            ////point = e.GetPosition(wrap1);
+            //Console.WriteLine("pre mouse lb down");
+
+            //foreach (Grid grid in wrap1.Children) {
+            //    if (pointd.Y >= 0 && pointd.Y <= grid.Height) {
+            //        if (pointd.X >= grid.Margin.Left + grid.Width - 5 && pointd.X <= grid.Margin.Left + grid.Width + 5) {
+            //            draggingEnd = true;
+            //        }
+            //        else if (pointd.X >= grid.Margin.Left - 5 && pointd.X <= grid.Margin.Left + 5) {
+            //            draggingStart = true;
+            //        }
+            //        else if (pointd.X >= grid.Margin.Left && point.X <= grid.Margin.Left + grid.Width) {
+            //            draggingMid = true;
+            //        }
+            //    }
+            //}
+
+
+
         }
 
         private void UserControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            Console.WriteLine("pre mouse lb up");
-            draggingEnd = false;
-            draggingStart = false;
-            draggingMid = false;
+            //Console.WriteLine("pre mouse lb up");
+            //draggingEnd = false;
+            //draggingStart = false;
+            //draggingMid = false;
         }
 
         private void UserControl_PreviewMouseMove(object sender, MouseEventArgs e) {
@@ -88,37 +92,84 @@ namespace SrtStudio
             Console.WriteLine(point);
 
             Point pointd;
-            pointd = e.GetPosition(grid1);
+            pointd = e.GetPosition(wrap1);
 
-            if (draggingEnd) {
-                grid1.Width -= deltax;
-            }
-            else if (draggingStart) {
-                double mleft = grid1.Margin.Left;
-                mleft -= deltax;
-                grid1.Width += deltax;
+            if (draggedGrid != null) {
+                Grid grid = draggedGrid;
 
-                grid1.Margin = new Thickness(mleft, 0, 0, 0);
-            }
-            else if (draggingMid) {
-                double mleft = grid1.Margin.Left;
-                mleft -= deltax;
-                grid1.Margin = new Thickness(mleft, 0, 0, 0);
-            }
-
-            else {
-                if (pointd.X >= grid1.Width - 5 && pointd.X <= grid1.Width + 5) {
-                    Cursor = Cursors.SizeWE;
+                if (draggingPoint == DraggingPoint.End) {
+                    grid.Width -= deltax;
                 }
-                else if (pointd.X >= -5 && pointd.X <= 5) {
-                    Cursor = Cursors.SizeWE;
+                else if (draggingPoint == DraggingPoint.Start) {
+                    double mleft = grid.Margin.Left;
+                    mleft -= deltax;
+                    grid.Width += deltax;
+
+                    grid.Margin = new Thickness(mleft, 0, 0, 0);
                 }
-                else Cursor = Cursors.Arrow;
+                else if (draggingPoint == DraggingPoint.Middle) {
+                    double mleft = grid.Margin.Left;
+                    mleft -= deltax;
+                    grid.Margin = new Thickness(mleft, 0, 0, 0);
+                }
             }
+
+        }
+
+        int dragSize = 5;
+
+        Point point;
+
+        Grid draggedGrid;
+        DraggingPoint draggingPoint;
+
+        enum DraggingPoint {
+            Start,
+            Middle,
+            End
         }
 
         private void grid1_MouseMove(object sender, MouseEventArgs e) {
+            Grid grid = sender as Grid;
+            Point point = e.GetPosition(grid);
 
+            Cursor cursor = Cursors.Arrow;
+            if (point.Y >= 0 && point.Y <= grid.Height) {
+                if ((point.X >= 0 && point.X <= dragSize) ||
+                    (point.X >= grid.Width - dragSize && point.X <= grid.Width)) {
+                    cursor = Cursors.SizeWE;
+                }
+            }
+            Cursor = cursor;
+        }
+
+        private void grid1_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            Grid grid = sender as Grid;
+            Point point = e.GetPosition(grid);
+
+            if (point.Y >= 0 && point.Y <= grid.Height) {
+                if ((point.X >= 0 && point.X <= dragSize)) {
+                    draggingPoint = DraggingPoint.Start;
+                    draggedGrid = grid;
+                }
+                else if (point.X >= grid.Width - dragSize && point.X <= grid.Width) {
+                    draggingPoint = DraggingPoint.End;
+                    draggedGrid = grid;
+                }
+                else {
+                    draggingPoint = DraggingPoint.Middle;
+                    draggedGrid = grid;
+                }
+            }
+        }
+
+        private void grid1_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            draggedGrid = null;
+
+        }
+
+        private void grid1_MouseLeave(object sender, MouseEventArgs e) {
+            Cursor = Cursors.Arrow;
         }
     }
 }

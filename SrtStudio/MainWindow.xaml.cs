@@ -26,12 +26,8 @@ namespace SrtStudio {
 
 
         public MainWindow() {
-            Unosquare.FFME.MediaElement.FFmpegDirectory = @"D:\portable\ffmpeg-4.0.2-win32-shared\bin";
-
 
             InitializeComponent();
-            //Xceed.Wpf.AvalonDock.Properties.Resources.
-
 
             player = new MpvPlayer(PlayerHost.Handle) {
                 Loop = true,
@@ -43,23 +39,18 @@ namespace SrtStudio {
         }
 
         private void Button_Click(object sender, RoutedEventArgs e) {
-            // if (Media.IsPaused)
-            //   Media.Play();
-            //else Media.Pause();
             if (player.IsPlaying)
                 player.Pause();
             else player.Resume();
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            //Media.Position = new TimeSpan(0, 0, 0, Convert.ToInt32(slider.Value / 100 * Media.NaturalDuration.TimeSpan.TotalSeconds));
             player.Position = new TimeSpan(0, 0, 0, Convert.ToInt32(slider.Value / 100 * player.Duration.TotalSeconds));
         }
 
         private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
             OpenFileDialog dialog = new OpenFileDialog();
             if (dialog.ShowDialog() == true) {
-                //Media.Source = new Uri(dialog.FileName);
                 player.Load(dialog.FileName);
                 Project.data.VideoPath = dialog.FileName;
             }
@@ -71,6 +62,8 @@ namespace SrtStudio {
                 Project.Write(dialog.FileName);
             }
         }
+
+        const int scale = 36;   //one segment is 'scale' (30) seconds
 
         private void menuSrtImport_Click(object sender, RoutedEventArgs e) {
             OpenFileDialog dialog = new OpenFileDialog();
@@ -87,14 +80,14 @@ namespace SrtStudio {
 
                 TimeSpan duration =  first.end - first.start;
 
-                double margin = first.start.TotalSeconds / 30 * 1000;
+                double margin = first.start.TotalSeconds / scale * 1000;
 
                 //first.start.TotalSeconds / 30 * 1000 = margin        | / 1000
                 //first.start.TotalSeconds / 30 = margin / 1000        | * 30
                 //first.start.TotalSeconds = margin / 1000 * 30
 
 
-                double width = duration.TotalSeconds / 30 * 1000;
+                double width = duration.TotalSeconds / scale * 1000;
 
                 timeline.mLeft = margin;
                 timeline.width = width;
@@ -107,21 +100,19 @@ namespace SrtStudio {
                 timeline.grid1.LayoutUpdated += (o, ea) => {
                     Console.WriteLine("layout updated");
 
-                    double start = timeline.mLeft / 1000 * 30;
+                    double start = timeline.mLeft / 1000 * scale;
 
-                    first.start = new TimeSpan(0, 0, (int)start);
+                    first.start = new TimeSpan(0, 0, 0, 0, (int)(start * 1000)+1);
                     textboxStart.Text = first.start.ToString();
 
-                    double dur = timeline.width / 1000 * 30;
-                    duration = new TimeSpan(0, 0, (int)dur);
+                    double dur = timeline.width / 1000 * scale;
+                    duration = new TimeSpan(0, 0, 0, 0, (int)(dur * 1000)+1);
                     textboxDur.Text = duration.ToString();
 
 
                     double end = start + dur;
-                    first.end = new TimeSpan(0, 0, (int)end);
+                    first.end = new TimeSpan(0, 0, 0, 0, (int)(end * 1000)+1);
                     textboxEnd.Text = first.end.ToString();
-
-
                 };
 
             }
