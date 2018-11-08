@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:SrtStudio"
-             mc:Ignorable="d" Height="132" Width="1100" PreviewMouseLeftButtonDown="UserControl_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="UserControl_PreviewMouseLeftButtonUp" PreviewMouseMove="UserControl_PreviewMouseMove" >
+             mc:Ignorable="d" Height="132" Width="1100" PreviewMouseMove="UserControl_PreviewMouseMove" >
     <Grid>
         <StackPanel VerticalAlignment="Bottom">
             <Grid>
@@ -13,18 +13,18 @@
                     <TextBlock x:Name="TrackName" Text="Track 1 - eng.srt" Margin="10,10,0,0" Foreground="White"/>
                 </Grid>
 
-                <ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled" CanContentScroll="True" Margin="100,0,0,0">
+                <ScrollViewer HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled" Margin="100,0,0,0" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel">
                     <Grid x:Name="wrap1" HorizontalAlignment="Left" VerticalAlignment="Top">
-                        <Grid x:Name="grid1" Height="100" Width="500"  Margin="0,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" MouseMove="grid1_MouseMove" MouseLeftButtonDown="grid1_MouseLeftButtonDown" MouseLeftButtonUp="grid1_MouseLeftButtonUp" MouseLeave="grid1_MouseLeave">
+                        <Grid x:Name="grid1" Height="100" Width="200"  Margin="0,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave">
                             <Rectangle x:Name="rect1" Fill="#FFFF7979" Stroke="#FF320000" />
                             <TextBlock x:Name="SubText" HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="- Snídaně za pět, zlato." VerticalAlignment="Top"/>
                         </Grid>
-                        <Grid x:Name="grid2" Height="100" Width="200"  Margin="500,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" MouseMove="grid1_MouseMove" MouseLeftButtonDown="grid1_MouseLeftButtonDown" MouseLeftButtonUp="grid1_MouseLeftButtonUp" MouseLeave="grid1_MouseLeave">
+                        <Grid x:Name="grid2" Height="100" Width="200"  Margin="500,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave">
                             <Rectangle x:Name="rect2" Fill="#FFFF7979" Stroke="#FF320000" />
                             <TextBlock x:Name="SubText2" HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Budu jeden z nich ukrást." VerticalAlignment="Top"/>
                         </Grid>
 
-                        <Grid x:Name="grid3" Height="100" Width="200"  Margin="700,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" MouseMove="grid1_MouseMove" MouseLeftButtonDown="grid1_MouseLeftButtonDown" MouseLeftButtonUp="grid1_MouseLeftButtonUp" MouseLeave="grid1_MouseLeave">
+                        <Grid x:Name="grid3" Height="100" Width="200"  Margin="700,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave">
                             <Rectangle x:Name="rect3" Fill="#FFFF7979" Stroke="#FF320000" />
                             <TextBlock x:Name="SubText3" HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="- Chceš další vejce?" VerticalAlignment="Top"/>
                         </Grid>

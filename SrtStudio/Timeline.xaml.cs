@@ -43,48 +43,6 @@ namespace SrtStudio
             set { grid1.Margin = new Thickness(value, 0, 0, 0); }
         }
 
-        //public delegate void SizeChanged();
-        //public event SizeChanged OnSizeChanged;
-
-
-
-        //bool draggingEnd = false;
-        //bool draggingStart = false;
-        //bool draggingMid = false;
-
-
-
-        private void UserControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            //Point pointd;
-            //pointd = e.GetPosition(wrap1);
-            ////point = e.GetPosition(wrap1);
-            //Console.WriteLine("pre mouse lb down");
-
-            //foreach (Grid grid in wrap1.Children) {
-            //    if (pointd.Y >= 0 && pointd.Y <= grid.Height) {
-            //        if (pointd.X >= grid.Margin.Left + grid.Width - 5 && pointd.X <= grid.Margin.Left + grid.Width + 5) {
-            //            draggingEnd = true;
-            //        }
-            //        else if (pointd.X >= grid.Margin.Left - 5 && pointd.X <= grid.Margin.Left + 5) {
-            //            draggingStart = true;
-            //        }
-            //        else if (pointd.X >= grid.Margin.Left && point.X <= grid.Margin.Left + grid.Width) {
-            //            draggingMid = true;
-            //        }
-            //    }
-            //}
-
-
-
-        }
-
-        private void UserControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            //Console.WriteLine("pre mouse lb up");
-            //draggingEnd = false;
-            //draggingStart = false;
-            //draggingMid = false;
-        }
-
         private void UserControl_PreviewMouseMove(object sender, MouseEventArgs e) {
             double deltax = point.X;
             point = e.GetPosition(wrap1);
@@ -113,7 +71,6 @@ namespace SrtStudio
                     grid.Margin = new Thickness(mleft, 0, 0, 0);
                 }
             }
-
         }
 
         int dragSize = 5;
@@ -129,7 +86,7 @@ namespace SrtStudio
             End
         }
 
-        private void grid1_MouseMove(object sender, MouseEventArgs e) {
+        private void grid_MouseMove(object sender, MouseEventArgs e) {
             Grid grid = sender as Grid;
             Point point = e.GetPosition(grid);
 
@@ -143,7 +100,7 @@ namespace SrtStudio
             Cursor = cursor;
         }
 
-        private void grid1_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+        private void grid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             Grid grid = sender as Grid;
             Point point = e.GetPosition(grid);
 
@@ -151,25 +108,40 @@ namespace SrtStudio
                 if ((point.X >= 0 && point.X <= dragSize)) {
                     draggingPoint = DraggingPoint.Start;
                     draggedGrid = grid;
+                    Mouse.Capture(grid);
                 }
                 else if (point.X >= grid.Width - dragSize && point.X <= grid.Width) {
                     draggingPoint = DraggingPoint.End;
                     draggedGrid = grid;
+                    Mouse.Capture(grid);
+
                 }
                 else {
                     draggingPoint = DraggingPoint.Middle;
                     draggedGrid = grid;
+                    Mouse.Capture(grid);
+
                 }
             }
         }
 
-        private void grid1_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+        private void grid_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             draggedGrid = null;
+            Mouse.Capture(null);
 
         }
 
-        private void grid1_MouseLeave(object sender, MouseEventArgs e) {
+        private void grid_MouseLeave(object sender, MouseEventArgs e) {
             Cursor = Cursors.Arrow;
+        }
+
+        private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            ScrollViewer scrollviewer = sender as ScrollViewer;
+            if (e.Delta > 0)
+                scrollviewer.LineLeft();
+            else
+                scrollviewer.LineRight();
+            e.Handled = true;
         }
     }
 }
