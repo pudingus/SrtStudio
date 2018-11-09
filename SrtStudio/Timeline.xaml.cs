@@ -19,29 +19,39 @@ namespace SrtStudio
     /// Interaction logic for Timeline.xaml
     /// </summary>
     public partial class Timeline : UserControl {
-        public Timeline() {
-            InitializeComponent();
-        }
+
+        public delegate void ChunkUpdated(Chunk chunk);
+        public event ChunkUpdated OnChunkUpdated;
 
         public string trackName {
             get { return TrackName.Text; }
             set { TrackName.Text = value; }
         }
 
-        public string subText {
-            get { return SubText.Text; }
-            set { SubText.Text = value; }
+
+        public Timeline() {
+            InitializeComponent();
         }
 
-        public double width {
-            get { return grid1.Width; }
-            set { grid1.Width = value; }
+
+        //public double width {
+        //    get { return grid1.Width; }
+        //    set { grid1.Width = value; }
+        //}
+
+        //public double mLeft {
+        //    get { return grid1.Margin.Left; }
+        //    set { grid1.Margin = new Thickness(value, 0, 0, 0); }
+        //}
+
+        public void RegisterHandlers(Chunk chunk) {
+            chunk.MouseMove += grid_MouseMove;
+            chunk.MouseLeftButtonDown += grid_MouseLeftButtonDown;
+            chunk.MouseLeftButtonUp += grid_MouseLeftButtonUp;
+            chunk.MouseLeave += grid_MouseLeave;
         }
 
-        public double mLeft {
-            get { return grid1.Margin.Left; }
-            set { grid1.Margin = new Thickness(value, 0, 0, 0); }
-        }
+        public List<Chunk> List { get; set; } = new List<Chunk>();
 
         private void UserControl_PreviewMouseMove(object sender, MouseEventArgs e) {
             double deltax = point.X;
@@ -52,24 +62,27 @@ namespace SrtStudio
             Point pointd;
             pointd = e.GetPosition(wrap1);
 
-            if (draggedGrid != null) {
-                Grid grid = draggedGrid;
+            if (draggedChunk != null) {
+                Chunk chunk = draggedChunk;
 
                 if (draggingPoint == DraggingPoint.End) {
-                    grid.Width -= deltax;
+                    chunk.Width -= deltax;
                 }
                 else if (draggingPoint == DraggingPoint.Start) {
-                    double mleft = grid.Margin.Left;
+                    double mleft = chunk.Margin.Left;
                     mleft -= deltax;
-                    grid.Width += deltax;
+                    chunk.Width += deltax;
 
-                    grid.Margin = new Thickness(mleft, 0, 0, 0);
+                    chunk.Margin = new Thickness(mleft, 0, 0, 0);
                 }
                 else if (draggingPoint == DraggingPoint.Middle) {
-                    double mleft = grid.Margin.Left;
+                    double mleft = chunk.Margin.Left;
                     mleft -= deltax;
-                    grid.Margin = new Thickness(mleft, 0, 0, 0);
+                    chunk.Margin = new Thickness(mleft, 0, 0, 0);
                 }
+
+
+                OnChunkUpdated?.Invoke(chunk);
             }
         }
 
@@ -77,7 +90,7 @@ namespace SrtStudio
 
         Point point;
 
-        Grid draggedGrid;
+        Chunk draggedChunk;
         DraggingPoint draggingPoint;
 
         enum DraggingPoint {
@@ -87,13 +100,13 @@ namespace SrtStudio
         }
 
         private void grid_MouseMove(object sender, MouseEventArgs e) {
-            Grid grid = sender as Grid;
-            Point point = e.GetPosition(grid);
+            Chunk chunk = (Chunk)sender;
+            Point point = e.GetPosition(chunk);
 
             Cursor cursor = Cursors.Arrow;
-            if (point.Y >= 0 && point.Y <= grid.Height) {
+            if (point.Y >= 0 && point.Y <= chunk.Height) {
                 if ((point.X >= 0 && point.X <= dragSize) ||
-                    (point.X >= grid.Width - dragSize && point.X <= grid.Width)) {
+                    (point.X >= chunk.Width - dragSize && point.X <= chunk.Width)) {
                     cursor = Cursors.SizeWE;
                 }
             }
@@ -101,32 +114,30 @@ namespace SrtStudio
         }
 
         private void grid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            Grid grid = sender as Grid;
-            Point point = e.GetPosition(grid);
+            Chunk chunk = (Chunk)sender;
+            Point point = e.GetPosition(chunk);
 
-            if (point.Y >= 0 && point.Y <= grid.Height) {
+            if (point.Y >= 0 && point.Y <= chunk.Height) {
                 if ((point.X >= 0 && point.X <= dragSize)) {
                     draggingPoint = DraggingPoint.Start;
-                    draggedGrid = grid;
-                    Mouse.Capture(grid);
+                    draggedChunk = chunk;
+                    Mouse.Capture(chunk);
                 }
-                else if (point.X >= grid.Width - dragSize && point.X <= grid.Width) {
+                else if (point.X >= chunk.Width - dragSize && point.X <= chunk.Width) {
                     draggingPoint = DraggingPoint.End;
-                    draggedGrid = grid;
-                    Mouse.Capture(grid);
-
+                    draggedChunk = chunk;
+                    Mouse.Capture(chunk);
                 }
                 else {
                     draggingPoint = DraggingPoint.Middle;
-                    draggedGrid = grid;
-                    Mouse.Capture(grid);
-
+                    draggedChunk = chunk;
+                    Mouse.Capture(chunk);
                 }
             }
         }
 
         private void grid_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            draggedGrid = null;
+            draggedChunk = null;
             Mouse.Capture(null);
 
         }
@@ -135,13 +146,33 @@ namespace SrtStudio
             Cursor = Cursors.Arrow;
         }
 
+        int lines = System.Windows.Forms.SystemInformation.MouseWheelScrollLines;
+
+
+
         private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             ScrollViewer scrollviewer = sender as ScrollViewer;
-            if (e.Delta > 0)
-                scrollviewer.LineLeft();
-            else
-                scrollviewer.LineRight();
+            if (e.Delta > 0) {
+
+                scrollviewer.LinesRight(lines);
+            }
+            else {
+                scrollviewer.LinesLeft(lines);
+            }
+
             e.Handled = true;
+        }
+    }
+    public static class Extensions {
+
+        public static void LinesLeft(this ScrollViewer scroll, int lines) {
+            for (int i = 0; i < lines; i++)
+                scroll.LineLeft();
+        }
+
+        public static void LinesRight(this ScrollViewer scroll, int lines) {
+            for (int i = 0; i < lines; i++)
+                scroll.LineRight();
         }
     }
 }

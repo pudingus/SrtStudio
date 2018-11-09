@@ -21,6 +21,8 @@ namespace SrtStudio {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
+    ///
+
     public partial class MainWindow : Window {
         private MpvPlayer player;
 
@@ -63,17 +65,92 @@ namespace SrtStudio {
             }
         }
 
-        const int scale = 36;   //one segment is 'scale' (30) seconds
+        const int scale = 20;   //one page is 'scale' (30) seconds
+
+        const int widthscale = 1000;
 
         private void menuSrtImport_Click(object sender, RoutedEventArgs e) {
             OpenFileDialog dialog = new OpenFileDialog();
             if (dialog.ShowDialog() == true) {
                 Srt srt = new Srt();
                 srt.Read(dialog.FileName);
-                int i = 1;
+                int i = 0;
                 foreach (Subtitle sub in srt.list) {
-                    listBox.Items.Add("# " + i + " "+ sub.start + " " + sub.end + " | " + sub.text);
                     i++;
+                    TimeSpan duration = sub.end - sub.start;
+
+                    string sdur = duration.ToString("s\\,fff");
+                    string sstart = sub.start.ToString("hh\\:mm\\:ss\\,fff");
+
+                    //listBox.Items.Add("# " + i + " "+ sstart + " " + sdur + " | \n" + sub.text);
+                    listView.Items.Add(new Item { Number = i.ToString(), Start = sstart, Dur = sdur, Text = sub.text });
+
+                    Chunk chunk = new Chunk();
+                    chunk.sub = sub;
+                    timeline.RegisterHandlers(chunk);
+                    chunk.Text = sub.text;
+                    chunk.Height = 100;
+                    chunk.HorizontalAlignment = HorizontalAlignment.Left;
+                    chunk.VerticalAlignment = VerticalAlignment.Top;
+
+
+                    double margin = sub.start.TotalSeconds / scale * widthscale;
+                    double width = duration.TotalSeconds / scale * widthscale;
+
+                    chunk.Dur = sdur;
+
+                    chunk.Margin = new Thickness(margin, 0, 0, 0);
+                    chunk.Width = width;
+
+
+                    //chunk.LayoutUpdated += (o, ea) => {
+                    //    Console.WriteLine("layout updated");
+
+                    //    double start = timeline.Margin.Left / 1000 * scale;
+
+                    //    sub.start = new TimeSpan(0, 0, 0, 0, (int)(start * 1000) + 1);
+                    //    textboxStart.Text = sub.start.ToString();
+
+                    //    double dur = chunk.Width / 1000 * scale;
+                    //    duration = new TimeSpan(0, 0, 0, 0, (int)(dur * 1000) + 1);
+                    //    textboxDur.Text = duration.ToString();
+
+
+                    //    double end = start + dur;
+                    //    sub.end = new TimeSpan(0, 0, 0, 0, (int)(end * 1000) + 1);
+                    //    textboxEnd.Text = sub.end.ToString();
+                    //};
+
+
+
+                    timeline.wrap1.Children.Add(chunk);
+                }
+
+                timeline.OnChunkUpdated += (chunk) => {
+                    Subtitle sub = chunk.sub;
+                    Console.WriteLine("chunk updated");
+
+                    double start = chunk.Margin.Left / widthscale * scale;
+
+                    sub.start = new TimeSpan(0, 0, 0, 0, (int)(start * widthscale) + 1);
+                    textboxStart.Text = sub.start.ToString();
+
+                    double dur = chunk.Width / widthscale * scale;
+                    TimeSpan duration = new TimeSpan(0, 0, 0, 0, (int)(dur * widthscale) + 1);
+                    string sdur = duration.ToString("s\\,fff");
+                    textboxDur.Text = sdur;
+                    chunk.Dur = sdur;
+
+
+                    double end = start + dur;
+                    sub.end = new TimeSpan(0, 0, 0, 0, (int)(end * widthscale) + 1);
+                    textboxEnd.Text = sub.end.ToString();
+
+                };
+
+
+                /*foreach (Event grid in timeline.wrap1.Children) {
+
                 }
 
                 Subtitle first = srt.list[0];
@@ -113,10 +190,16 @@ namespace SrtStudio {
                     double end = start + dur;
                     first.end = new TimeSpan(0, 0, 0, 0, (int)(end * 1000)+1);
                     textboxEnd.Text = first.end.ToString();
-                };
+                };*/
 
             }
         }
 
+    }
+    public class Item {
+        public string Number { get; set; }
+        public string Start { get; set; }
+        public string Dur { get; set; }
+        public string Text { get; set; }
     }
 }
