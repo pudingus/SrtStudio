@@ -31,9 +31,26 @@ namespace SrtStudio
             set { textBlock_dur.Text = value; }
         }
 
+        private bool _selected;
+        public bool Selected {
+            get { return _selected; }
+            set {
+                _selected = value;
+                if (_selected) selBorder.Visibility = Visibility.Visible;
+                else selBorder.Visibility = Visibility.Hidden;
+            }
+        }
+
         public Chunk()
         {
             InitializeComponent();
+        }
+
+        private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            Size size = e.NewSize;
+            if (size.Height < 70) textBlock_dur.Visibility = Visibility.Collapsed;
+            else textBlock_dur.Visibility = Visibility.Visible;
         }
     }
 }

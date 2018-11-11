@@ -10,6 +10,7 @@ namespace SrtStudio
 {
     public class Subtitle
     {
+        public Item item;
         public TimeSpan start;
         public TimeSpan end;
         public string text;
@@ -27,9 +28,16 @@ namespace SrtStudio
         int lnumber = 0;
 
         public void Read(string filename) {
-            StreamReader reader = new StreamReader(filename);
-            while (!reader.EndOfStream) {
-                string line = reader.ReadLine();
+
+
+            //StreamReader reader = new StreamReader(filename);
+            //while (!reader.EndOfStream) {
+            //    string line = reader.ReadLine();
+
+            string s = File.ReadAllText(filename);
+            StringReader reader = new StringReader(s);
+            string line;
+            while ((line = reader.ReadLine()) != null) {
 
                 if (mode == 1) {
                     lnumber++;

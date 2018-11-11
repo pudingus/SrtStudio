@@ -15,7 +15,9 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 using Mpv.NET.Player;
-
+using System.Windows.Threading;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace SrtStudio {
     /// <summary>
@@ -26,8 +28,13 @@ namespace SrtStudio {
     public partial class MainWindow : Window {
         private MpvPlayer player;
 
+        DispatcherTimer timer = new DispatcherTimer();
+
+
+        public ObservableCollection<Item> SuperList { get; set; } = new ObservableCollection<Item>();
 
         public MainWindow() {
+            DataContext = this;
 
             InitializeComponent();
 
@@ -38,6 +45,42 @@ namespace SrtStudio {
             //player.Load("http://techslides.com/demos/sample-videos/small.mp4");
             //player.Resume();
 
+            timer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+            timer.Tick += Timer_Tick;
+
+
+            timeline.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+        }
+
+        bool dont = false;
+        private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null) {
+                foreach (Chunk chunk in e.OldItems) {
+
+                    dont = true;
+                    listView.SelectedItems.Remove(chunk.sub.item);
+                }
+            }
+
+            if (e.NewItems != null) {
+                foreach (Chunk chunk in e.NewItems) {
+                    dont = true;
+                    listView.SelectedItems.Add(chunk.sub.item);
+                }
+            }
+
+
+        }
+
+        private void Timer_Tick(object sender, EventArgs e) {
+            timer.Stop();
+            //listView.Items.Refresh();
+
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() => listView.Items.Refresh())
+                );
         }
 
         private void Button_Click(object sender, RoutedEventArgs e) {
@@ -65,7 +108,7 @@ namespace SrtStudio {
             }
         }
 
-        const int scale = 20;   //one page is 'scale' (30) seconds
+        const int scale = 10;   //one page is 'scale' (30) seconds
 
         const int widthscale = 1000;
 
@@ -75,23 +118,59 @@ namespace SrtStudio {
                 Srt srt = new Srt();
                 srt.Read(dialog.FileName);
                 int i = 0;
+
+
+                Grid track = new Grid();
+                track.Height = 100;
+
+                track.HorizontalAlignment = HorizontalAlignment.Left;
+                track.VerticalAlignment = VerticalAlignment.Top;
+
+                timeline.stack.Children.Add(track);
+
+
+                TrackMeta trackMeta = new TrackMeta();
+                trackMeta.Text = dialog.SafeFileName;
+                trackMeta.Height = 100;
+                trackMeta.Width = 100;
+
+                trackMeta.Track = track;
+
+                timeline.RegisterTrackMeta(trackMeta);
+
+                timeline.stackMeta.Children.Add(trackMeta);
+
+
                 foreach (Subtitle sub in srt.list) {
                     i++;
                     TimeSpan duration = sub.end - sub.start;
 
-                    string sdur = duration.ToString("s\\,fff");
-                    string sstart = sub.start.ToString("hh\\:mm\\:ss\\,fff");
+                    string sdur = duration.ToString("s\\,ff");
+                    //string sstart = sub.start.ToString("hh\\:mm\\:ss\\,fff");
+
+                    //string sstart = sub.start.ToShortForm();
+                    string sstart = sub.start.ToString("h\\:mm\\:ss\\,ff");
+
 
                     //listBox.Items.Add("# " + i + " "+ sstart + " " + sdur + " | \n" + sub.text);
-                    listView.Items.Add(new Item { Number = i.ToString(), Start = sstart, Dur = sdur, Text = sub.text });
+
+                    Item item = new Item { Number = i.ToString(), Start = sstart, Dur = sdur, Text = sub.text };
+                    SuperList.Add(item);
+                    //listView.Items.Add(item);
+                    sub.item = item;
+
+
+
+
 
                     Chunk chunk = new Chunk();
                     chunk.sub = sub;
                     timeline.RegisterHandlers(chunk);
                     chunk.Text = sub.text;
-                    chunk.Height = 100;
                     chunk.HorizontalAlignment = HorizontalAlignment.Left;
-                    chunk.VerticalAlignment = VerticalAlignment.Top;
+                    chunk.VerticalAlignment = VerticalAlignment.Stretch;
+
+                    item.Chunk = chunk;
 
 
                     double margin = sub.start.TotalSeconds / scale * widthscale;
@@ -102,28 +181,7 @@ namespace SrtStudio {
                     chunk.Margin = new Thickness(margin, 0, 0, 0);
                     chunk.Width = width;
 
-
-                    //chunk.LayoutUpdated += (o, ea) => {
-                    //    Console.WriteLine("layout updated");
-
-                    //    double start = timeline.Margin.Left / 1000 * scale;
-
-                    //    sub.start = new TimeSpan(0, 0, 0, 0, (int)(start * 1000) + 1);
-                    //    textboxStart.Text = sub.start.ToString();
-
-                    //    double dur = chunk.Width / 1000 * scale;
-                    //    duration = new TimeSpan(0, 0, 0, 0, (int)(dur * 1000) + 1);
-                    //    textboxDur.Text = duration.ToString();
-
-
-                    //    double end = start + dur;
-                    //    sub.end = new TimeSpan(0, 0, 0, 0, (int)(end * 1000) + 1);
-                    //    textboxEnd.Text = sub.end.ToString();
-                    //};
-
-
-
-                    timeline.wrap1.Children.Add(chunk);
+                    track.Children.Add(chunk);
                 }
 
                 timeline.OnChunkUpdated += (chunk) => {
@@ -133,26 +191,29 @@ namespace SrtStudio {
                     double start = chunk.Margin.Left / widthscale * scale;
 
                     sub.start = new TimeSpan(0, 0, 0, 0, (int)(start * widthscale) + 1);
-                    textboxStart.Text = sub.start.ToString();
+                    //sub.item.Start = sub.start.ToString();
+                    //sub.item.Start = sub.start.ToShortForm();
+                    sub.item.Start = sub.start.ToString("h\\:mm\\:ss\\,ff");
 
                     double dur = chunk.Width / widthscale * scale;
                     TimeSpan duration = new TimeSpan(0, 0, 0, 0, (int)(dur * widthscale) + 1);
-                    string sdur = duration.ToString("s\\,fff");
-                    textboxDur.Text = sdur;
+                    string sdur = duration.ToString("s\\,ff");
+                    sub.item.Dur = sdur;
                     chunk.Dur = sdur;
 
 
                     double end = start + dur;
                     sub.end = new TimeSpan(0, 0, 0, 0, (int)(end * widthscale) + 1);
-                    textboxEnd.Text = sub.end.ToString();
+                    //textboxEnd.Text = sub.end.ToString();
+
+                    //timer.Start();
+
+                    //listView.Items.Refresh();
 
                 };
 
 
-                /*foreach (Event grid in timeline.wrap1.Children) {
-
-                }
-
+                /*
                 Subtitle first = srt.list[0];
 
                 TimeSpan duration =  first.end - first.start;
@@ -173,33 +234,43 @@ namespace SrtStudio {
                 textboxStart.Text = first.start.ToString();
                 textboxEnd.Text = first.end.ToString();
                 textboxDur.Text = duration.ToString();
-
-                timeline.grid1.LayoutUpdated += (o, ea) => {
-                    Console.WriteLine("layout updated");
-
-                    double start = timeline.mLeft / 1000 * scale;
-
-                    first.start = new TimeSpan(0, 0, 0, 0, (int)(start * 1000)+1);
-                    textboxStart.Text = first.start.ToString();
-
-                    double dur = timeline.width / 1000 * scale;
-                    duration = new TimeSpan(0, 0, 0, 0, (int)(dur * 1000)+1);
-                    textboxDur.Text = duration.ToString();
-
-
-                    double end = start + dur;
-                    first.end = new TimeSpan(0, 0, 0, 0, (int)(end * 1000)+1);
-                    textboxEnd.Text = first.end.ToString();
-                };*/
+                */
 
             }
         }
 
-    }
-    public class Item {
-        public string Number { get; set; }
-        public string Start { get; set; }
-        public string Dur { get; set; }
-        public string Text { get; set; }
+        private void Button_Click_1(object sender, RoutedEventArgs e) {
+            listView.Items.Refresh();
+        }
+
+        private void listView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            //Console.WriteLine("OriginalSource = " + e.OriginalSource);
+
+            if (dont == false) {
+                foreach (Item item in e.RemovedItems) {
+                    item.Enabled = false;
+                    timeline.SelectedChunks.Remove(item.Chunk);
+                }
+
+                foreach (Item item in e.AddedItems) {
+                    item.Enabled = true;
+                    timeline.SelectedChunks.Add(item.Chunk);
+                }
+            }
+            else dont = false;
+
+            //foreach (Item item in e.RemovedItems) {
+            //    item.Enabled = false;
+            //    timeline.SelectedChunks.Remove(item.Chunk);
+            //}
+
+            //foreach (Item item in e.AddedItems)
+            //{
+            //    item.Enabled = true;
+            //    timeline.SelectedChunks.Add(item.Chunk);
+            //}
+
+        }
     }
 }

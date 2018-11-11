@@ -1,0 +1,17 @@
+﻿<Application x:Class="ThemeTest.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ThemeTest"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Monotone.Colors.xaml" />
+                <ResourceDictionary Source="Monotone.Brushes.xaml" />
+                <ResourceDictionary Source="MonotoneCustom.xaml"/>
+                <ResourceDictionary Source="Monotone.xaml" />
+                
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

@@ -4,5 +4,16 @@
              xmlns:local="clr-namespace:SrtStudio"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!--<ResourceDictionary Source="Blend.xaml" />-->
+                <ResourceDictionary Source="themes/Monotone.Colors.xaml" />
+                <ResourceDictionary Source="themes/Monotone.Brushes.xaml" />
+                <ResourceDictionary Source="themes/MonotoneCustom.xaml" />
+                <!--<ResourceDictionary Source="themes/Monotone.xaml" />-->
+                <ResourceDictionary Source="themes/Mend.xaml" />
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

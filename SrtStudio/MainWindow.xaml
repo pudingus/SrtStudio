@@ -20,21 +20,55 @@
                 <xcad:LayoutPanel Orientation="Vertical" >
                     <xcad:LayoutPanel Orientation="Horizontal" DockHeight="5*">
                         <xcad:LayoutPanel Orientation="Vertical" DockWidth="2*">
-                            <xcad:LayoutAnchorablePane >
+                            <xcad:LayoutAnchorablePane>
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" Background="#FF212121" Foreground="White" BorderBrush="{x:Null}">
+                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged">
                                         <ListView.View>
                                             <GridView>
-                                                <GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="30"/>
+                                                <!--<GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="30"/>
                                                 <GridViewColumn Header="Start" DisplayMemberBinding="{Binding Start}" Width="80"/>
                                                 <GridViewColumn Header="Dur" DisplayMemberBinding="{Binding Dur}" Width="40"/>
-                                                <GridViewColumn Header="Text" DisplayMemberBinding="{Binding Text}" Width="180"/>
+                                                <GridViewColumn Header="Text" DisplayMemberBinding="{Binding Text}" Width="180"/>-->
+
+                                                <GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="30"/>
+                                                <GridViewColumn Header="Start" >
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBox Text="{Binding Start}" Width="80" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Dur">
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBox Text="{Binding Dur}" Width="40" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
+                                                <GridViewColumn Header="Text" >
+                                                    <GridViewColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <!--<TextBlock local:Attached.FormattedText="{Binding Text}" >
+                                                                <Bold FontWeight="ExtraBlack">fffffff</Bold>
+                                                                <Italic FontStyle="Oblique">fffffffff</Italic>
+                                                            </TextBlock>-->
+                                                            <!--<RichTextBox Height="50" local:HtmlRichTextBox.Text="{Binding Text}" Width="200" IsReadOnly="False" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent"/>-->
+                                                            <RichTextBox Width="200" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent">
+                                                                <FlowDocument>
+                                                                    <Paragraph>
+                                                                        <Run Text="{Binding Text}"></Run>
+                                                                    </Paragraph>
+                                                                </FlowDocument>
+                                                            </RichTextBox>
+                                                        </DataTemplate>
+                                                    </GridViewColumn.CellTemplate>
+                                                </GridViewColumn>
                                             </GridView>
                                         </ListView.View>
                                     </ListView>
                                 </xcad:LayoutAnchorable>
                             </xcad:LayoutAnchorablePane>
-                            <xcad:LayoutAnchorablePane DockHeight="60">
+                            <!--<xcad:LayoutAnchorablePane DockHeight="100">
                                 <xcad:LayoutAnchorable ContentId="controls" Title="Controls" AutoHideWidth="240">
                                     <Grid>
                                         <TextBox x:Name="textboxStart" HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
@@ -43,17 +77,17 @@
 
                                     </Grid>
                                 </xcad:LayoutAnchorable>
-                            </xcad:LayoutAnchorablePane>
+                            </xcad:LayoutAnchorablePane>-->
                         </xcad:LayoutPanel>
 
                         <xcad:LayoutAnchorablePane DockWidth="3*">
                             <xcad:LayoutAnchorable ContentId="video" Title="Video" >
                                 <Grid>
-                                    <WindowsFormsHost Margin="0,0,0,31">
+                                    <WindowsFormsHost Margin="0,0,0,29">
                                         <windowsForms:Panel x:Name="PlayerHost" />
                                     </WindowsFormsHost>
-                                    <Slider x:Name="slider" ValueChanged="Slider_ValueChanged" Maximum="100" IsMoveToPointEnabled="True" Height="18" VerticalAlignment="Bottom" Margin="43,0,0,6"/>
-                                    <Button x:Name="playButton" Content="►" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="0,0,0,6" FontFamily="Arial"/>
+                                    <Slider x:Name="slider" ValueChanged="Slider_ValueChanged" Maximum="100" IsMoveToPointEnabled="True" Height="20" VerticalAlignment="Bottom" Margin="38,0,5,4"/>
+                                    <Button x:Name="playButton" Content="►" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
                                 </Grid>
                             </xcad:LayoutAnchorable>
                         </xcad:LayoutAnchorablePane>
@@ -63,27 +97,22 @@
                         <xcad:LayoutAnchorablePane>
                             <xcad:LayoutAnchorable ContentId="timeline" Title="Timeline" AutoHideWidth="240">
                                 <Grid>
-                                    <local:Timeline x:Name="timeline" trackName="dafu1q">
-
-                                    </local:Timeline>
+                                    <local:Timeline x:Name="timeline"/>
                                 </Grid>
-
                             </xcad:LayoutAnchorable>
-
                         </xcad:LayoutAnchorablePane>
                     </xcad:LayoutPanel>
                 </xcad:LayoutPanel>
             </xcad:LayoutRoot>
 
         </xcad:DockingManager>
-        <Menu Height="20" VerticalAlignment="Top" Background="#FF343434" HorizontalAlignment="Left" Width="191">
+        <Menu Height="26" VerticalAlignment="Top" Background="#FF343434" HorizontalAlignment="Left" Width="191">
             <MenuItem Header="Project" Foreground="White">
                 <MenuItem Header="New" Foreground="Black"/>
                 <MenuItem Header="Open..." Foreground="Black"/>
                 <MenuItem Header="Save" Foreground="Black"/>
-                <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Foreground="Black" Click="menuProjectSaveAs_Click"/>
+                <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Click="menuProjectSaveAs_Click" Foreground="Black"/>
                 <MenuItem Header="Close" Foreground="Black"/>
-
             </MenuItem>
             <MenuItem Header="Video" Foreground="White">
                 <MenuItem x:Name="menuVideoOpen" Header="Open..." Foreground="Black" Click="menuVideoOpen_Click"/>
@@ -92,6 +121,7 @@
                 <MenuItem x:Name="menuSrtImport" Header="Import..." Foreground="Black" Click="menuSrtImport_Click"/>
             </MenuItem>
         </Menu>
+        <Button Content="Button" HorizontalAlignment="Left" Margin="291,-1,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_1"/>
 
     </Grid>
 </Window>

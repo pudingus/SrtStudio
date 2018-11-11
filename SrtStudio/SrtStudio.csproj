@@ -35,13 +35,24 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ControlzEx, Version=3.0.2.4, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ControlzEx.3.0.2.4\lib\net45\ControlzEx.dll</HintPath>
+    </Reference>
+    <Reference Include="MonotoneTheme, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f27e788a057830a8, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>themes\MonotoneTheme.dll</HintPath>
+    </Reference>
     <Reference Include="Mpv.NET, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Mpv.NET.0.9.0\lib\netstandard2.0\Mpv.NET.dll</HintPath>
     </Reference>
+    <Reference Include="PresentationFramework.Aero" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Windows.Interactivity, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\ControlzEx.3.0.2.4\lib\net45\System.Windows.Interactivity.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -62,6 +73,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Extensions.cs" />
+    <Compile Include="HtmlConverter\HtmlCssParser.cs" />
+    <Compile Include="HtmlConverter\HtmlFromXamlConverter.cs" />
+    <Compile Include="HtmlConverter\HtmlLexicalAnalyzer.cs" />
+    <Compile Include="HtmlConverter\HtmlParser.cs" />
+    <Compile Include="HtmlConverter\HtmlSchema.cs" />
+    <Compile Include="HtmlConverter\HtmlTokenType.cs" />
+    <Compile Include="HtmlConverter\HtmlToXamlConverter.cs" />
+    <Compile Include="HtmlRichTextBox.cs" />
+    <Compile Include="InlineTextBlock.cs" />
+    <Compile Include="Item.cs" />
     <Compile Include="Subtitle.cs" />
     <Compile Include="Timeline.xaml.cs">
       <DependentUpon>Timeline.xaml</DependentUpon>
@@ -69,6 +91,14 @@
     <Compile Include="Chunk.xaml.cs">
       <DependentUpon>Chunk.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Track.cs" />
+    <Compile Include="TrackMeta.xaml.cs">
+      <DependentUpon>TrackMeta.xaml</DependentUpon>
+    </Compile>
+    <Page Include="Blend.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -81,11 +111,35 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="themes\Mend.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="themes\Monotone.Brushes.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="themes\Monotone.Colors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="themes\Monotone.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="themes\MonotoneCustom.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Timeline.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Chunk.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="TrackMeta.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -152,6 +206,7 @@
     <Content Include="lib\mpv-1.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="themes\MonotoneTheme.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
