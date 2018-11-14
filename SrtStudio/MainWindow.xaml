@@ -9,9 +9,9 @@
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit" x:Class="SrtStudio.MainWindow"
 	    xmlns:windowsForms="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
         mc:Ignorable="d"
-        Title="SrtStudio - Untitled" Height="493.385" Width="914.075" Background="#FF3A3A3A" Foreground="White">
+        Title="SrtStudio - Untitled" Height="493.385" Width="914.075" Background="#FF3A3A3A" Foreground="White" Closing="Window_Closing">
     <Grid>
-        <xcad:DockingManager Margin="0,25,0,0">
+        <xcad:DockingManager x:Name="dockingManager" Margin="0,25,0,0">
             <xcad:DockingManager.Theme>
                 <xcad:Vs2013DarkTheme/>
             </xcad:DockingManager.Theme>
@@ -19,22 +19,20 @@
             <xcad:LayoutRoot x:Name="_layoutRoot">
                 <xcad:LayoutPanel Orientation="Vertical" >
                     <xcad:LayoutPanel Orientation="Horizontal" DockHeight="5*">
-                        <xcad:LayoutPanel Orientation="Vertical" DockWidth="2*">
+                        <xcad:LayoutPanel Orientation="Vertical" DockWidth="380">
                             <xcad:LayoutAnchorablePane>
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged">
+                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged">
                                         <ListView.View>
                                             <GridView>
-                                                <!--<GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="30"/>
-                                                <GridViewColumn Header="Start" DisplayMemberBinding="{Binding Start}" Width="80"/>
+                                                <GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="35"/>
+                                                <GridViewColumn Header="Start" DisplayMemberBinding="{Binding Start}" Width="75"/>
                                                 <GridViewColumn Header="Dur" DisplayMemberBinding="{Binding Dur}" Width="40"/>
-                                                <GridViewColumn Header="Text" DisplayMemberBinding="{Binding Text}" Width="180"/>-->
-
-                                                <GridViewColumn Header="#" DisplayMemberBinding="{Binding Number}" Width="30"/>
-                                                <GridViewColumn Header="Start" >
+                                                <!--<GridViewColumn Header="Text" DisplayMemberBinding="{Binding Text}" Width="180"/>-->
+                                                <!--<GridViewColumn Header="Start" >
                                                     <GridViewColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <TextBox Text="{Binding Start}" Width="80" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
+                                                            <TextBox Text="{Binding Start}" Width="70" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
                                                         </DataTemplate>
                                                     </GridViewColumn.CellTemplate>
                                                 </GridViewColumn>
@@ -44,8 +42,8 @@
                                                             <TextBox Text="{Binding Dur}" Width="40" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
                                                         </DataTemplate>
                                                     </GridViewColumn.CellTemplate>
-                                                </GridViewColumn>
-                                                <GridViewColumn Header="Text" >
+                                                </GridViewColumn>-->
+                                                <GridViewColumn Header="Text" Width="205">
                                                     <GridViewColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <!--<TextBlock local:Attached.FormattedText="{Binding Text}" >
@@ -53,13 +51,15 @@
                                                                 <Italic FontStyle="Oblique">fffffffff</Italic>
                                                             </TextBlock>-->
                                                             <!--<RichTextBox Height="50" local:HtmlRichTextBox.Text="{Binding Text}" Width="200" IsReadOnly="False" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent"/>-->
-                                                            <RichTextBox Width="200" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent">
+                                                            <!--<RichTextBox Width="200" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent">
                                                                 <FlowDocument>
                                                                     <Paragraph>
                                                                         <Run Text="{Binding Text}"></Run>
                                                                     </Paragraph>
                                                                 </FlowDocument>
-                                                            </RichTextBox>
+                                                            </RichTextBox>-->
+                                                            <TextBox Text="{Binding Text}" Width="190" IsEnabled="{Binding Enabled}" Background="Transparent" TextChanged="TextBox_TextChanged"/>
+
                                                         </DataTemplate>
                                                     </GridViewColumn.CellTemplate>
                                                 </GridViewColumn>
@@ -93,7 +93,7 @@
                         </xcad:LayoutAnchorablePane>
                     </xcad:LayoutPanel>
 
-                    <xcad:LayoutPanel Orientation="Horizontal" DockMinHeight="160" DockHeight="3*" >
+                    <xcad:LayoutPanel Orientation="Horizontal" DockHeight="200" >
                         <xcad:LayoutAnchorablePane>
                             <xcad:LayoutAnchorable ContentId="timeline" Title="Timeline" AutoHideWidth="240">
                                 <Grid>
@@ -106,22 +106,23 @@
             </xcad:LayoutRoot>
 
         </xcad:DockingManager>
-        <Menu Height="26" VerticalAlignment="Top" Background="#FF343434" HorizontalAlignment="Left" Width="191">
+        <Menu Height="25" VerticalAlignment="Top" Background="#FF343434">
             <MenuItem Header="Project" Foreground="White">
-                <MenuItem Header="New" Foreground="Black"/>
-                <MenuItem Header="Open..." Foreground="Black"/>
-                <MenuItem Header="Save" Foreground="Black"/>
-                <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Click="menuProjectSaveAs_Click" Foreground="Black"/>
-                <MenuItem Header="Close" Foreground="Black"/>
+                <MenuItem x:Name="menuProjectNew" Header="New" InputGestureText="Ctrl+N" Foreground="Black" Click="menuProjectNew_Click"/>
+                <MenuItem x:Name="menuProjectOpen" InputGestureText="Ctrl+O" Header="Open..." Foreground="Black" Click="menuProjectOpen_Click"/>
+                <MenuItem x:Name="menuProjectSave" Header="Save" InputGestureText="Ctrl+S" Foreground="Black" Click="menuProjectSave_Click"/>
+                <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Foreground="Black" Click="menuProjectSaveAs_Click" />
+                <MenuItem x:Name="menuProjectClose" Header="Close" Foreground="Black" Click="menuProjectClose_Click"/>
             </MenuItem>
             <MenuItem Header="Video" Foreground="White">
                 <MenuItem x:Name="menuVideoOpen" Header="Open..." Foreground="Black" Click="menuVideoOpen_Click"/>
             </MenuItem>
             <MenuItem Header="Srt" Foreground="White">
                 <MenuItem x:Name="menuSrtImport" Header="Import..." Foreground="Black" Click="menuSrtImport_Click"/>
+                <MenuItem x:Name="menuSrtRefImport" Header="Import reference..." Foreground="Black" Click="menuSrtRefImport_Click"/>
+                <MenuItem x:Name="menuSrtExport" Header="Export..." Foreground="Black" Click="menuSrtExport_Click"/>
             </MenuItem>
         </Menu>
-        <Button Content="Button" HorizontalAlignment="Left" Margin="291,-1,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_1"/>
 
     </Grid>
 </Window>

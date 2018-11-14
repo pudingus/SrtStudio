@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace SrtStudio
 {
@@ -49,6 +50,7 @@ namespace SrtStudio
             set {
                 _text = value;
                 RaisePropertyChanged("Text");
+                Console.WriteLine("text changed");
             }
         }
 
@@ -61,6 +63,17 @@ namespace SrtStudio
             }
         }
 
+        private Thickness _borderThickness;
+        public Thickness BorderThickness {
+            get { return _borderThickness; }
+            set {
+                _borderThickness = value;
+                RaisePropertyChanged("BorderThickness");
+            }
+        }
+
         public Chunk Chunk { get; set; }
+
+
     }
 }

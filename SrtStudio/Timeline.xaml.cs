@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SrtStudio
 {
@@ -21,100 +22,75 @@ namespace SrtStudio
     /// </summary>
     public partial class Timeline : UserControl {
 
-        public delegate void ChunkUpdated(Chunk chunk);
-        public event ChunkUpdated OnChunkUpdated;
 
-
+        TrackMeta draggedMeta;
+        int dragSize = 8;
+        Point point;
 
         public Timeline() {
             InitializeComponent();
 
-            SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
-        }
-
-        private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            if (e.OldItems != null) {
-                foreach (Chunk chunk in e.OldItems) {
-                    chunk.Selected = false;
-                }
-            }
-
-            if (e.NewItems != null) {
-                foreach (Chunk chunk in e.NewItems) {
-                    chunk.Selected = true;
-                }
-            }
-
 
         }
 
-        public void RegisterHandlers(Chunk chunk) {
-            chunk.MouseMove += grid_MouseMove;
-            chunk.MouseLeftButtonDown += grid_MouseLeftButtonDown;
-            chunk.MouseLeftButtonUp += grid_MouseLeftButtonUp;
-            chunk.MouseLeave += grid_MouseLeave;
+
+        public void AddTrack(Track track) {
+            track.TrackMeta.MouseMove += TrackMeta_MouseMove;
+            track.TrackMeta.MouseLeftButtonDown += TrackMeta_MouseLeftButtonDown;
+            track.TrackMeta.MouseLeftButtonUp += TrackMeta_MouseLeftButtonUp;
+            track.TrackMeta.MouseLeave += TrackMeta_MouseLeave;
+
+            //stack.Children.Add(track.TrackLine);
+            //stackMeta.Children.Add(track.TrackMeta);
+
+
+            stack.Children.Insert(0, track.TrackLine);
+            stackMeta.Children.Insert(0, track.TrackMeta);
         }
 
-        public void RegisterTrackMeta(TrackMeta trackMeta)
-        {
-            trackMeta.MouseMove += TrackMeta_MouseMove;
-            trackMeta.MouseLeftButtonDown += TrackMeta_MouseLeftButtonDown;
-            trackMeta.MouseLeftButtonUp += TrackMeta_MouseLeftButtonUp;
-            trackMeta.MouseLeave += TrackMeta_MouseLeave;
+        public void ClearTracks() {
+            stack.Children.Clear();
+            stackMeta.Children.Clear();
         }
 
-        public List<Chunk> List { get; set; } = new List<Chunk>();
 
-        public ObservableCollection<Chunk> SelectedChunks { get; set; } = new ObservableCollection<Chunk>();
-
-
-
-        private void TrackMeta_MouseMove(object sender, MouseEventArgs e)
-        {
+        private void TrackMeta_MouseMove(object sender, MouseEventArgs e) {
             TrackMeta trackMeta = sender as TrackMeta;
             Point pointe = e.GetPosition(trackMeta);
 
             Cursor cursor = Cursors.Arrow;
-            if (pointe.X >= 0 && pointe.X <= trackMeta.Width) {
-                if (pointe.Y >= trackMeta.Height - dragSize && pointe.Y <= trackMeta.Height) {
+            if (pointe.X >= 0 && pointe.X <= trackMeta.ActualWidth) {
+                if (pointe.Y >= trackMeta.ActualHeight - dragSize && pointe.Y <= trackMeta.ActualHeight) {
                     cursor = Cursors.SizeNS;
                 }
             }
             Cursor = cursor;
         }
 
-
-        private void TrackMeta_MouseLeave(object sender, MouseEventArgs e)
-        {
-            //Cursor = Cursors.Arrow;
+        private void TrackMeta_MouseLeave(object sender, MouseEventArgs e) {
+            Cursor = Cursors.Arrow;
         }
 
-        TrackMeta draggedMeta;
-
-        private void TrackMeta_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
+        private void TrackMeta_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             TrackMeta trackMeta = sender as TrackMeta;
             Point pointe = e.GetPosition(trackMeta);
 
-            if (pointe.X >= 0 && pointe.X <= trackMeta.Width) {
-                if (pointe.Y >= trackMeta.Height - dragSize && pointe.Y <= trackMeta.Height) {
+            if (pointe.X >= 0 && pointe.X <= trackMeta.ActualWidth) {
+                if (pointe.Y >= trackMeta.ActualHeight - dragSize && pointe.Y <= trackMeta.ActualHeight) {
                     draggedMeta = trackMeta;
                     Mouse.Capture(trackMeta);
                 }
             }
         }
 
-        private void TrackMeta_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (draggedMeta != null && draggedMeta.Track != null) {
-                draggedMeta.Track.Height = draggedMeta.Height;
+        private void TrackMeta_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            if (draggedMeta != null) {
+                draggedMeta.ParentTrack.TrackLine.Height = draggedMeta.ActualHeight;
             }
 
             draggedMeta = null;
             Mouse.Capture(null);
         }
-
 
         private void UserControl_PreviewMouseMove(object sender, MouseEventArgs e) {
             double deltax = point.X;
@@ -122,129 +98,26 @@ namespace SrtStudio
             point = e.GetPosition(stackMeta);
             deltax -= point.X;
             deltay -= point.Y;
-
             //Console.WriteLine(point);
 
-            if (draggedChunk != null) {
-                Chunk chunk = draggedChunk;
-
-                if (draggingPoint == DraggingPoint.End) {
-                    chunk.Width -= deltax;
-                    OnChunkUpdated?.Invoke(chunk);
-
-                }
-                else if (draggingPoint == DraggingPoint.Start) {
-                    double mleft = chunk.Margin.Left;
-                    mleft -= deltax;
-                    chunk.Width += deltax;
-
-                    chunk.Margin = new Thickness(mleft, 0, 0, 0);
-                    OnChunkUpdated?.Invoke(chunk);
-
-                }
-                else if (draggingPoint == DraggingPoint.Middle) {
-                    foreach (Chunk chunkk in SelectedChunks) {
-                        double mleft = chunkk.Margin.Left;
-                        mleft -= deltax;
-                        chunkk.Margin = new Thickness(mleft, 0, 0, 0);
-                        OnChunkUpdated?.Invoke(chunkk);
-                    }
-                }
-            }
 
             TrackMeta trackMeta = draggedMeta;
 
             if (trackMeta != null) {
                 trackMeta.Height -= deltay;
-
-                //if (trackMeta.Track != null)
-                //    trackMeta.Track.Height -= deltay;
             }
         }
-
-        int dragSize = 8;
-
-        Point point;
-
-        Chunk draggedChunk;
-        DraggingPoint draggingPoint;
-
-        enum DraggingPoint {
-            Start,
-            Middle,
-            End
-        }
-
-        private void grid_MouseMove(object sender, MouseEventArgs e) {
-            Chunk chunk = (Chunk)sender;
-            Point point = e.GetPosition(chunk);
-
-            Cursor cursor = Cursors.Arrow;
-            if (point.Y >= 0 && point.Y <= chunk.ActualHeight) {
-                if ((point.X >= 0 && point.X <= dragSize) ||
-                    (point.X >= chunk.Width - dragSize && point.X <= chunk.Width)) {
-                    cursor = Cursors.SizeWE;
-                }
-            }
-            Cursor = cursor;
-        }
-
-        private void grid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            Chunk chunk = (Chunk)sender;
-            Point point = e.GetPosition(chunk);
-
-            if (point.Y >= 0 && point.Y <= chunk.ActualHeight) {
-                if ((point.X >= 0 && point.X <= dragSize)) {
-                    draggingPoint = DraggingPoint.Start;
-                    draggedChunk = chunk;
-                    Mouse.Capture(chunk);
-                }
-                else if (point.X >= chunk.Width - dragSize && point.X <= chunk.Width) {
-                    draggingPoint = DraggingPoint.End;
-                    draggedChunk = chunk;
-                    Mouse.Capture(chunk);
-                }
-                else {
-                    draggingPoint = DraggingPoint.Middle;
-                    draggedChunk = chunk;
-                    Mouse.Capture(chunk);
-                }
-            }
-
-            if (Keyboard.Modifiers == ModifierKeys.Control) {
-                if (!chunk.Selected) {
-                    chunk.Selected = true;
-                    SelectedChunks.Add(chunk);
-                }
-                else {
-                    chunk.Selected = false;
-                    SelectedChunks.Remove(chunk);
-                }
-            }
-        }
-
-        private void grid_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            draggedChunk = null;
-            Mouse.Capture(null);
-
-        }
-
-        private void grid_MouseLeave(object sender, MouseEventArgs e) {
-            Cursor = Cursors.Arrow;
-        }
-
-        int lines = System.Windows.Forms.SystemInformation.MouseWheelScrollLines;
-
 
 
         private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
-            ScrollViewer scrollviewer = sender as ScrollViewer;
-            if (e.Delta > 0) {
+            ScrollViewer sv = (ScrollViewer)sender;
+            int lines = System.Windows.Forms.SystemInformation.MouseWheelScrollLines;
 
-                scrollviewer.LinesRight(lines);
+            if (e.Delta > 0) {
+                sv.LinesRight(lines);
             }
             else {
-                scrollviewer.LinesLeft(lines);
+                sv.LinesLeft(lines);
             }
 
             e.Handled = true;
@@ -252,15 +125,7 @@ namespace SrtStudio
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            ScrollViewer sv = sender as ScrollViewer;
-            Console.WriteLine("scroll changed");
-            Console.WriteLine(e.ViewportWidth);
-            Console.WriteLine(e.HorizontalOffset);
-            Console.WriteLine(e.ExtentWidth);
-            Console.WriteLine(sv.ScrollableWidth);
-
-
-
+            ScrollViewer sv = (ScrollViewer)sender;
             scrollbar.Maximum = sv.ScrollableWidth;
             scrollbar.ViewportSize = e.ViewportWidth;
             scrollbar.Value = e.HorizontalOffset;
@@ -268,9 +133,7 @@ namespace SrtStudio
 
         private void ScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
         {
-            Console.WriteLine("scrollbar scroll");
             svHor.ScrollToHorizontalOffset(e.NewValue);
         }
     }
-
 }

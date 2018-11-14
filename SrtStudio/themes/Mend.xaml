@@ -284,6 +284,40 @@
 
 
 
+    <!-- textbox-->
+    <Style TargetType="{x:Type TextBox}">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource MCTextBox}"/>
+        <!--<Setter Property="ContextMenu" Value="{StaticResource TextBoxContextMenu}" />-->
+        <Setter Property="SelectionBrush" Value="{DynamicResource SelectedBrush}" />
+        <Setter Property="FontSize" Value="{DynamicResource DefaultFontSize}" />
+        <Setter Property="MinHeight" Value="22" />
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TextBox}">
+                    <Border x:Name="Bd" BorderThickness="{TemplateBinding BorderThickness}"  SnapsToDevicePixels="true" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="{DynamicResource DefaultCornerRadius}">
+                        <ScrollViewer VerticalAlignment="Top" Margin="0,2,0,0" VerticalContentAlignment="Top" x:Name="PART_ContentHost" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Foreground" Value="{DynamicResource MCTextDisabled}"/>
+                            <Setter Property="BorderBrush" TargetName="Bd" Value="Transparent" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="true">
+                            <Setter Property="BorderBrush" TargetName="Bd" Value="{DynamicResource MCScrollbarHilit}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="true">
+                            <Setter Property="BorderBrush" TargetName="Bd" Value="{DynamicResource MCText}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
+
 
 
 
@@ -296,7 +330,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Thumb}">
                     <Border Padding="{TemplateBinding Padding}"  Background="Transparent">
-                        <Rectangle HorizontalAlignment="Center" Width="3" Fill="{TemplateBinding Background}"/>
+                        <Rectangle HorizontalAlignment="Center" Width="1" Fill="{TemplateBinding Background}"/>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -334,22 +368,37 @@
 
     <!--Listviewitem-->
     <Style TargetType="ListViewItem">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource MCTextDisabled}"/>
+
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ListViewItem}">
-                    <Border SnapsToDevicePixels="True" BorderThickness="{TemplateBinding BorderThickness}"   BorderBrush="{TemplateBinding BorderBrush}"  Background="{TemplateBinding Background}" CornerRadius="{DynamicResource DefaultCornerRadius}">
+                    <Border SnapsToDevicePixels="True" BorderThickness="0"  BorderBrush="{TemplateBinding BorderBrush}"  Background="{TemplateBinding Background}" CornerRadius="{DynamicResource DefaultCornerRadius}">
                         <Grid>
                             <!--<Grid.RowDefinitions>
                                 <RowDefinition MaxHeight="11" />
                                 <RowDefinition />
                             </Grid.RowDefinitions>-->
-                            <GridViewRowPresenter Grid.RowSpan="2" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            <GridViewRowPresenter Grid.RowSpan="2" Margin="2,3,0,5" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+
+
+                        <Trigger Property="ItemsControl.AlternationIndex"  Value="0">
+                            <Setter Property="Background" Value="#FF212121" />
+                        </Trigger>
+                        <Trigger Property="ItemsControl.AlternationIndex"  Value="1">
+                            <Setter Property="Background" Value="#FF171717" />
+                        </Trigger>
+
+
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource SelectedBrush}" />
+                            <!--<Setter Property="Foreground" Value="{DynamicResource SelectedBrush}" />-->
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
@@ -357,28 +406,26 @@
                                 <Condition Property="IsEnabled" Value="True" />
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource DarkerSelectedBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource MCText}" />
                         </MultiTrigger>
-                        <MultiTrigger>
+                        <!--<MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsSelected" Value="True" />
                                 <Condition Property="IsEnabled" Value="True" />
                                 <Condition Property="Selector.IsSelectionActive" Value="False" />
                             </MultiTrigger.Conditions>
                             <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource DarkerSelectedBrush}" />
-                        </MultiTrigger>
+                            --><!--<Setter Property="Foreground" Value="{DynamicResource DarkerSelectedBrush}" />--><!--
+                        </MultiTrigger>-->
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsSelected" Value="True" />
                                 <Condition Property="IsMouseOver" Value="True" />
                                 <Condition Property="IsEnabled" Value="True" />
                             </MultiTrigger.Conditions>
-                            <Setter Property="Foreground" Value="{DynamicResource SelectedBrush}" />
+                            <!--<Setter Property="Foreground" Value="{DynamicResource SelectedBrush}" />-->
                         </MultiTrigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="{DynamicResource DisabledBrush}" />
-                        </Trigger>
+
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -640,7 +687,7 @@
                             <Setter Property="Data" TargetName="OuterBorder" Value="{StaticResource SliderPointedThumbDisabledGeometry}"/>
                             <Setter Property="Fill" TargetName="Background" Value="{DynamicResource BaseBrush}"/>
                             <Setter Property="Stroke" TargetName="InnerBorder" Value="{x:Null}"/>
-                           <Setter Property="Stroke" TargetName="OuterBorder" Value="{DynamicResource DisabledBorderBrush}"/>
+                            <Setter Property="Stroke" TargetName="OuterBorder" Value="{DynamicResource DisabledBorderBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

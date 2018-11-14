@@ -5,11 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:SrtStudio"
              mc:Ignorable="d"
-             d:DesignHeight="100" SizeChanged="UserControl_SizeChanged" Width="92">
+             d:DesignHeight="100" d:DesignWidth="200" SizeChanged="UserControl_SizeChanged" HorizontalAlignment="Left" VerticalAlignment="Stretch" >
     <Grid>
-        <Rectangle Fill="#FFFF7979" Stroke="#FF320000" />
-        <Border x:Name="selBorder" Background="#55E2E2E2" Visibility="Hidden"/>
-        <TextBlock x:Name="textBlock" Margin="10,10,5,0" TextWrapping="NoWrap" Text="- Snídaně za pět, zlato." VerticalAlignment="Top"/>
-        <TextBlock x:Name="textBlock_dur" Margin="10,0,5,10" TextWrapping="NoWrap" Text="1,423" Height="16" VerticalAlignment="Bottom"/>
+        <!--<Rectangle x:Name="backRect" Fill="#FF3C3C3C" Stroke="Black" StrokeThickness="1"/>-->
+
+        <Rectangle x:Name="backRect" Fill="#FFA83535" />
+        <Border x:Name="hilitBorder" Background="#1EE2E2E2" d:IsHidden="True"/>
+        <Border x:Name="selBorder" Background="#35FFFFFF" d:IsHidden="True"/>
+        <Border BorderBrush="Black" BorderThickness="1"/>
+
+        <TextBlock x:Name="textBlock" Foreground="White" Margin="10,10,5,2" TextWrapping="NoWrap" Text="- Snídaně za pět, zlato." VerticalAlignment="Top"/>
+        <TextBlock x:Name="textBlock_dur" Foreground="White" Margin="10,0,5,10" TextWrapping="NoWrap" Text="1,423" Height="16" VerticalAlignment="Bottom"/>
     </Grid>
 </UserControl>

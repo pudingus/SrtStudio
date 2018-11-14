@@ -21,6 +21,7 @@ namespace SrtStudio
     public partial class Chunk : UserControl
     {
         public Subtitle sub;
+        public Item Item { get; set; }
         public string Text {
             get { return textBlock.Text; }
             set { textBlock.Text = value; }
@@ -44,6 +45,8 @@ namespace SrtStudio
         public Chunk()
         {
             InitializeComponent();
+            selBorder.Visibility = Visibility.Hidden;
+            hilitBorder.Visibility = Visibility.Hidden;
         }
 
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)

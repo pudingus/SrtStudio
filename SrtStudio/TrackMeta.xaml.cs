@@ -20,14 +20,17 @@ namespace SrtStudio
     /// </summary>
     public partial class TrackMeta : UserControl
     {
-        public Grid Track { get; set; }
-        public string Text {
-            get { return trackName.Text; }
-            set { trackName.Text = value; }
-        }
+        public Track ParentTrack { get; set; }
+
         public TrackMeta()
         {
             InitializeComponent();
+        }
+
+        public TrackMeta(Track parent)
+        {
+            InitializeComponent();
+            ParentTrack = parent;
         }
     }
 }

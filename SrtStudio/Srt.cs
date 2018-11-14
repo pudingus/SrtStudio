@@ -5,37 +5,70 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Windows;
+using System.Xml.Serialization;
 
 namespace SrtStudio
 {
     public class Subtitle
     {
-        public Item item;
-        public TimeSpan start;
-        public TimeSpan end;
-        public string text;
+        [XmlIgnore]
+        public TimeSpan Start { get; set; }
+        [XmlAttribute]
+        public string SStart {
+            get => Start.ToString();
+            set => Start = TimeSpan.Parse(value);
+        }
+
+        [XmlIgnore]
+        public TimeSpan End { get; set; }
+        [XmlAttribute]
+        public string SEnd {
+            get => End.ToString();
+            set => End = TimeSpan.Parse(value);
+        }
+
+        [XmlAttribute]
+        public string Text { get; set; }
     }
-    public class Srt
+
+    public static class Srt
     {
-        public List<Subtitle> list = new List<Subtitle>();
-        Subtitle subtitle = new Subtitle();
+        static Subtitle subtitle = new Subtitle();
+
+        public static void Write(string filename, List<Subtitle> list) {
+            StreamWriter writer = new StreamWriter(filename);
+
+            int i = 0;
+            foreach (Subtitle sub in list) {
+                i++;
+                writer.WriteLine(i);
+                string format = "hh\\:mm\\:ss\\,fff";
+                writer.Write(sub.Start.ToString(format));
+                writer.Write(" --> ");
+                writer.WriteLine(sub.End.ToString(format));
+                writer.WriteLine(sub.Text);
+                writer.WriteLine();
+            }
+
+            writer.Close();
+        }
 
         //0 - looking for timecode
         //1 - looking for text
         //2 - looking for line break
 
-        int mode = 0;
-        int lnumber = 0;
+        static int mode = 0;
+        static int lnumber = 0;
 
-        public void Read(string filename) {
+        public static List<Subtitle> Read(string filename) {
+            List<Subtitle> list = new List<Subtitle>();
 
+            //string s = File.ReadAllText(filename);
+            //StringReader reader = new StringReader(s);
+            //string line;
+            //while ((line = reader.ReadLine()) != null) {
 
-            //StreamReader reader = new StreamReader(filename);
-            //while (!reader.EndOfStream) {
-            //    string line = reader.ReadLine();
-
-            string s = File.ReadAllText(filename);
-            StringReader reader = new StringReader(s);
+            StreamReader reader = new StreamReader(filename);
             string line;
             while ((line = reader.ReadLine()) != null) {
 
@@ -48,9 +81,9 @@ namespace SrtStudio
                         subtitle = new Subtitle();
                     }
                     else {
-                        if (!string.IsNullOrEmpty(subtitle.text))
-                            subtitle.text += "\n";
-                        subtitle.text += line;
+                        if (!string.IsNullOrEmpty(subtitle.Text))
+                            subtitle.Text += Environment.NewLine;
+                        subtitle.Text += line;
                     }
                 }
 
@@ -77,7 +110,7 @@ namespace SrtStudio
                                 int second = Convert.ToInt32(line.Substring(6, 2));
                                 int ms = Convert.ToInt32(line.Substring(9, 3));
 
-                                subtitle.start = new TimeSpan(0, hour, minute, second, ms);
+                                subtitle.Start = new TimeSpan(0, hour, minute, second, ms);
 
                                 line = line.Remove(0, 12);
                             }
@@ -108,7 +141,7 @@ namespace SrtStudio
                                 int second = Convert.ToInt32(line.Substring(6, 2));
                                 int ms = Convert.ToInt32(line.Substring(9, 3));
 
-                                subtitle.end = new TimeSpan(0, hour, minute, second, ms);
+                                subtitle.End = new TimeSpan(0, hour, minute, second, ms);
 
                                 line = line.Remove(0, 12);
 
@@ -120,6 +153,10 @@ namespace SrtStudio
                     }
                 }
             }
+            reader.Close();
+            return list;
+
+            //MessageBox.Show("done");
         }
     }
 }

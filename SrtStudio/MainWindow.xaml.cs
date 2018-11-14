@@ -28,10 +28,11 @@ namespace SrtStudio {
     public partial class MainWindow : Window {
         private MpvPlayer player;
 
-        DispatcherTimer timer = new DispatcherTimer();
 
 
         public ObservableCollection<Item> SuperList { get; set; } = new ObservableCollection<Item>();
+
+        Track editTrack;
 
         public MainWindow() {
             DataContext = this;
@@ -42,45 +43,78 @@ namespace SrtStudio {
                 Loop = true,
                 Volume = 50
             };
+
+            player.PositionChanged += Player_PositionChanged;
             //player.Load("http://techslides.com/demos/sample-videos/small.mp4");
             //player.Resume();
 
-            timer.Interval = new TimeSpan(0, 0, 0, 0, 100);
-            timer.Tick += Timer_Tick;
+            UpdateTitle("Untitled");
 
-
-            timeline.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+            Settings.Read();
+            if (Settings.Data.Maximized) {
+                WindowState = WindowState.Maximized;
+            }
         }
 
-        bool dont = false;
+        private void Player_PositionChanged(object sender, MpvPlayerPositionChangedEventArgs e) {
+            Dispatcher.Invoke(() => {
+                slider.ValueChanged -= Slider_ValueChanged;
+                if (player.Duration.TotalSeconds != 0) {
+                    slider.Value = e.NewPosition.TotalSeconds / player.Duration.TotalSeconds * 100;
+                }
+                slider.ValueChanged += Slider_ValueChanged;
+
+            });
+        }
+
         private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            if (e.OldItems != null) {
-                foreach (Chunk chunk in e.OldItems) {
+            listView.SelectionChanged -= listView_SelectionChanged;
 
-                    dont = true;
-                    listView.SelectedItems.Remove(chunk.sub.item);
+            foreach (Item item in listView.SelectedItems) {
+                item.Enabled = false;
+                //item.BorderThickness = new Thickness(0);
+            }
+
+            listView.SelectedItems.Clear();
+            foreach (Chunk chunk in editTrack.SelectedChunks) {
+                if (chunk != null) {
+                    listView.SelectedItems.Add(chunk.Item);
+                    chunk.Item.Enabled = true;
+                    //chunk.Item.BorderThickness = new Thickness(1);
+
+                    listView.ScrollIntoView(chunk.Item);
                 }
             }
 
-            if (e.NewItems != null) {
-                foreach (Chunk chunk in e.NewItems) {
-                    dont = true;
-                    listView.SelectedItems.Add(chunk.sub.item);
-                }
-            }
 
 
+            listView.SelectionChanged += listView_SelectionChanged;
         }
 
-        private void Timer_Tick(object sender, EventArgs e) {
-            timer.Stop();
-            //listView.Items.Refresh();
+        private void listView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
 
-            Application.Current.Dispatcher.BeginInvoke(
-                DispatcherPriority.Background,
-                new Action(() => listView.Items.Refresh())
-                );
+            foreach (Item item in e.RemovedItems) {
+                item.Enabled = false;
+                //item.BorderThickness = new Thickness(0);
+
+                editTrack.SelectedChunks.Remove(item.Chunk);
+            }
+
+            foreach (Item item in e.AddedItems) {
+                item.Enabled = true;
+                //item.BorderThickness = new Thickness(1);
+                editTrack.SelectedChunks.Add(item.Chunk);
+
+                item.Chunk.BringIntoView();
+            }
+
+            if (player.IsMediaLoaded) {
+                Item item = (Item)listView.SelectedItem;
+                if (item != null) {
+                    player.Position = item.Chunk.sub.Start;
+                }
+            }
         }
 
         private void Button_Click(object sender, RoutedEventArgs e) {
@@ -90,187 +124,251 @@ namespace SrtStudio {
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            player.Position = new TimeSpan(0, 0, 0, Convert.ToInt32(slider.Value / 100 * player.Duration.TotalSeconds));
-        }
-
-        private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
-            OpenFileDialog dialog = new OpenFileDialog();
-            if (dialog.ShowDialog() == true) {
-                player.Load(dialog.FileName);
-                Project.data.VideoPath = dialog.FileName;
+            if (player.IsMediaLoaded) {
+                player.Position = new TimeSpan(0, 0, 0, Convert.ToInt32(slider.Value / 100 * player.Duration.TotalSeconds));
             }
         }
 
-        private void menuProjectSaveAs_Click(object sender, RoutedEventArgs e) {
-            SaveFileDialog dialog = new SaveFileDialog();
-            if (dialog.ShowDialog() == true) {
-                Project.Write(dialog.FileName);
+
+
+
+        const string startFormat = "h\\:mm\\:ss\\,ff";
+        const string durFormat = "s\\,ff";
+
+        private void LoadSubtitles(List<Subtitle> subtitles, string name) {
+            int i = 0;
+
+            if (subtitles.Count <= 0) return;
+
+            Track track = new Track {
+                Name = name
+            };
+            editTrack = track;
+            editTrack.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+
+            timeline.AddTrack(track);
+            foreach (Subtitle sub in subtitles) {
+                i++;
+                TimeSpan duration = sub.End - sub.Start;
+
+                string sdur = duration.ToString(durFormat);
+                string sstart = sub.Start.ToString(startFormat);
+
+                Item item = new Item {
+                    Number = i.ToString(),
+                    Start = sstart,
+                    Dur = sdur,
+                    Text = sub.Text
+                };
+                SuperList.Add(item);
+
+                double margin = sub.Start.TotalSeconds / scale * widthscale;
+                double width = duration.TotalSeconds / scale * widthscale;
+                Chunk chunk = new Chunk {
+                    sub = sub,
+                    Text = sub.Text,
+                    Dur = sdur,
+                    Margin = new Thickness(margin, 0, 0, 0),
+                    Width = width,
+                    Item = item
+                };
+
+                item.Chunk = chunk;
+
+                track.AddChunk(chunk);
+            }
+
+            editTrack.OnChunkUpdated += (chunk) => {
+                Subtitle sub = chunk.sub;
+                Console.WriteLine("chunk updated");
+
+                double start = chunk.Margin.Left / widthscale * scale;
+
+                sub.Start = new TimeSpan(0, 0, 0, 0, (int)(start * widthscale) + 1);
+                chunk.Item.Start = sub.Start.ToString(startFormat);
+
+                double dur = chunk.Width / widthscale * scale;
+                TimeSpan duration = new TimeSpan(0, 0, 0, 0, (int)(dur * widthscale) + 1);
+                string sdur = duration.ToString(durFormat);
+                chunk.Item.Dur = sdur;
+                chunk.Dur = sdur;
+
+
+                double end = start + dur;
+                sub.End = new TimeSpan(0, 0, 0, 0, (int)(end * widthscale) + 1);
+            };
+        }
+
+        private void LoadRefSubtitles(List<Subtitle> subtitles, string name) {
+            int i = 0;
+
+            if (subtitles.Count <= 0) return;
+
+            Track track = new Track {
+                Name = name,
+                Height = 50,
+                Locked = true
+            };
+
+            timeline.AddTrack(track);
+
+            foreach (Subtitle sub in subtitles) {
+                i++;
+                TimeSpan duration = sub.End - sub.Start;
+
+                string sdur = duration.ToString(durFormat);
+                string sstart = sub.Start.ToString(startFormat);
+
+                double margin = sub.Start.TotalSeconds / scale * widthscale;
+                double width = duration.TotalSeconds / scale * widthscale;
+                Chunk chunk = new Chunk {
+                    sub = sub,
+                    Text = sub.Text,
+                    Dur = sdur,
+                    Margin = new Thickness(margin, 0, 0, 0),
+                    Width = width
+                };
+
+                track.AddChunk(chunk);
             }
         }
+
+
+
+        const string programName = "SrtStudio";
+
+        private void UpdateTitle(string currentFile) {
+            Title = currentFile + " - " + programName;
+        }
+
 
         const int scale = 10;   //one page is 'scale' (30) seconds
 
         const int widthscale = 1000;
 
+        private void CloseProject() {
+            SuperList.Clear();
+            player.Stop();
+            player.PlaylistClear();
+            timeline.ClearTracks();
+            Project.Data.Subtitles = null;
+            Project.Data.RefSubtitles = null;
+            UpdateTitle("Untitled");
+        }
+
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e) {
+            TextBox textBox = (TextBox)sender;
+            Item item = (Item)textBox.DataContext;
+            item.Chunk.sub.Text = textBox.Text;
+            item.Chunk.Text = textBox.Text;
+            Console.WriteLine("textbox textchanged");
+        }
+
+        const string srtFilter = "Srt - SubRip(*.srt)|*.srt";
+        const string projExt = "sprj";
+        const string projFilter = "SrtStudio Project (*.sprj)|*.sprj";
+        const string videoFilter = "Common video files (*.mkv;*.mp4;*;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts)|" +
+            "*.mkv;*.mp4;*;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts|" +
+            "All files (*.*)|*.*";
+
+
+
+        private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter = videoFilter;
+            if (dialog.ShowDialog() == true) {
+                player.Load(dialog.FileName);
+                Project.Data.VideoPath = dialog.FileName;
+            }
+        }
+
+
         private void menuSrtImport_Click(object sender, RoutedEventArgs e) {
             OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter = srtFilter;
             if (dialog.ShowDialog() == true) {
-                Srt srt = new Srt();
-                srt.Read(dialog.FileName);
-                int i = 0;
 
-
-                Grid track = new Grid();
-                track.Height = 100;
-
-                track.HorizontalAlignment = HorizontalAlignment.Left;
-                track.VerticalAlignment = VerticalAlignment.Top;
-
-                timeline.stack.Children.Add(track);
-
-
-                TrackMeta trackMeta = new TrackMeta();
-                trackMeta.Text = dialog.SafeFileName;
-                trackMeta.Height = 100;
-                trackMeta.Width = 100;
-
-                trackMeta.Track = track;
-
-                timeline.RegisterTrackMeta(trackMeta);
-
-                timeline.stackMeta.Children.Add(trackMeta);
-
-
-                foreach (Subtitle sub in srt.list) {
-                    i++;
-                    TimeSpan duration = sub.end - sub.start;
-
-                    string sdur = duration.ToString("s\\,ff");
-                    //string sstart = sub.start.ToString("hh\\:mm\\:ss\\,fff");
-
-                    //string sstart = sub.start.ToShortForm();
-                    string sstart = sub.start.ToString("h\\:mm\\:ss\\,ff");
-
-
-                    //listBox.Items.Add("# " + i + " "+ sstart + " " + sdur + " | \n" + sub.text);
-
-                    Item item = new Item { Number = i.ToString(), Start = sstart, Dur = sdur, Text = sub.text };
-                    SuperList.Add(item);
-                    //listView.Items.Add(item);
-                    sub.item = item;
-
-
-
-
-
-                    Chunk chunk = new Chunk();
-                    chunk.sub = sub;
-                    timeline.RegisterHandlers(chunk);
-                    chunk.Text = sub.text;
-                    chunk.HorizontalAlignment = HorizontalAlignment.Left;
-                    chunk.VerticalAlignment = VerticalAlignment.Stretch;
-
-                    item.Chunk = chunk;
-
-
-                    double margin = sub.start.TotalSeconds / scale * widthscale;
-                    double width = duration.TotalSeconds / scale * widthscale;
-
-                    chunk.Dur = sdur;
-
-                    chunk.Margin = new Thickness(margin, 0, 0, 0);
-                    chunk.Width = width;
-
-                    track.Children.Add(chunk);
-                }
-
-                timeline.OnChunkUpdated += (chunk) => {
-                    Subtitle sub = chunk.sub;
-                    Console.WriteLine("chunk updated");
-
-                    double start = chunk.Margin.Left / widthscale * scale;
-
-                    sub.start = new TimeSpan(0, 0, 0, 0, (int)(start * widthscale) + 1);
-                    //sub.item.Start = sub.start.ToString();
-                    //sub.item.Start = sub.start.ToShortForm();
-                    sub.item.Start = sub.start.ToString("h\\:mm\\:ss\\,ff");
-
-                    double dur = chunk.Width / widthscale * scale;
-                    TimeSpan duration = new TimeSpan(0, 0, 0, 0, (int)(dur * widthscale) + 1);
-                    string sdur = duration.ToString("s\\,ff");
-                    sub.item.Dur = sdur;
-                    chunk.Dur = sdur;
-
-
-                    double end = start + dur;
-                    sub.end = new TimeSpan(0, 0, 0, 0, (int)(end * widthscale) + 1);
-                    //textboxEnd.Text = sub.end.ToString();
-
-                    //timer.Start();
-
-                    //listView.Items.Refresh();
-
-                };
-
-
-                /*
-                Subtitle first = srt.list[0];
-
-                TimeSpan duration =  first.end - first.start;
-
-                double margin = first.start.TotalSeconds / scale * 1000;
-
-                //first.start.TotalSeconds / 30 * 1000 = margin        | / 1000
-                //first.start.TotalSeconds / 30 = margin / 1000        | * 30
-                //first.start.TotalSeconds = margin / 1000 * 30
-
-
-                double width = duration.TotalSeconds / scale * 1000;
-
-                timeline.mLeft = margin;
-                timeline.width = width;
-
-
-                textboxStart.Text = first.start.ToString();
-                textboxEnd.Text = first.end.ToString();
-                textboxDur.Text = duration.ToString();
-                */
-
+                Project.Data.Subtitles = Srt.Read(dialog.FileName);
+                Project.Data.TrackName = dialog.SafeFileName;
+                LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
             }
         }
 
-        private void Button_Click_1(object sender, RoutedEventArgs e) {
-            listView.Items.Refresh();
+        private void menuSrtRefImport_Click(object sender, RoutedEventArgs e) {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter = srtFilter;
+            if (dialog.ShowDialog() == true) {
+                Project.Data.RefSubtitles = Srt.Read(dialog.FileName);
+                Project.Data.RefTrackName = dialog.SafeFileName;
+                LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
+            }
         }
 
-        private void listView_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            //Console.WriteLine("OriginalSource = " + e.OriginalSource);
+        private void menuSrtExport_Click(object sender, RoutedEventArgs e) {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.AddExtension = true;
+            dialog.DefaultExt = "srt";
+            dialog.Filter = srtFilter;
+            if (dialog.ShowDialog() == true) {
+                Srt.Write(dialog.FileName, Project.Data.Subtitles);
+            }
+        }
 
-            if (dont == false) {
-                foreach (Item item in e.RemovedItems) {
-                    item.Enabled = false;
-                    timeline.SelectedChunks.Remove(item.Chunk);
-                }
+        private void menuProjectNew_Click(object sender, RoutedEventArgs e) {
+            CloseProject();
+        }
 
-                foreach (Item item in e.AddedItems) {
-                    item.Enabled = true;
-                    timeline.SelectedChunks.Add(item.Chunk);
+        private void menuProjectOpen_Click(object sender, RoutedEventArgs e) {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter = projFilter;
+            if (dialog.ShowDialog() == true) {
+                CloseProject();
+                Project.Read(dialog.FileName);
+                UpdateTitle(dialog.SafeFileName);
+                if (!string.IsNullOrEmpty(Project.Data.VideoPath))
+                    player.Load(Project.Data.VideoPath);
+
+                LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
+                LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
+            }
+        }
+
+        private void menuProjectSave_Click(object sender, RoutedEventArgs e) {
+            if (string.IsNullOrEmpty(Project.FileName)) {
+                SaveFileDialog dialog = new SaveFileDialog();
+                dialog.AddExtension = true;
+                dialog.DefaultExt = projExt;
+                dialog.Filter = projFilter;
+                if (dialog.ShowDialog() == true) {
+                    Project.Write(dialog.FileName);
+                    UpdateTitle(dialog.SafeFileName);
                 }
             }
-            else dont = false;
+            else {
+                Project.Write(Project.FileName);
+            }
+        }
 
-            //foreach (Item item in e.RemovedItems) {
-            //    item.Enabled = false;
-            //    timeline.SelectedChunks.Remove(item.Chunk);
-            //}
+        private void menuProjectSaveAs_Click(object sender, RoutedEventArgs e) {
+            SaveFileDialog dialog = new SaveFileDialog();
+            dialog.AddExtension = true;
+            dialog.DefaultExt = projExt;
+            dialog.Filter = projFilter;
+            if (dialog.ShowDialog() == true) {
+                Project.Write(dialog.FileName);
+                UpdateTitle(dialog.SafeFileName);
+            }
+        }
 
-            //foreach (Item item in e.AddedItems)
-            //{
-            //    item.Enabled = true;
-            //    timeline.SelectedChunks.Add(item.Chunk);
-            //}
+        private void menuProjectClose_Click(object sender, RoutedEventArgs e) {
+            CloseProject();
+        }
 
+        private void Window_Closing(object sender, CancelEventArgs e) {
+            if (WindowState == WindowState.Maximized) {
+                Settings.Data.Maximized = true;
+            }
+            Settings.Write();
         }
     }
 }

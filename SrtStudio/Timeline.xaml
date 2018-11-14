@@ -6,32 +6,30 @@
              xmlns:local="clr-namespace:SrtStudio"
              mc:Ignorable="d" d:DesignHeight="250" d:DesignWidth="1100" PreviewMouseMove="UserControl_PreviewMouseMove" >
     <Grid>
+
+        <!--<StackPanel x:Name="newStack">
+
+        </StackPanel>
+        <Canvas IsHitTestVisible="False">
+            <Border x:Name="resizeBorder" Width="100" Height="100" Background="#550071B2" Visibility="Hidden">
+
+            </Border>
+        </Canvas>-->
         <ScrollViewer Margin="0" VerticalScrollBarVisibility="Auto">
             <Grid>
-                <StackPanel x:Name="stackMeta">
-                    <!--<local:TrackMeta Height="100" Width="100" Text="track 1 - eng.srt" MouseMove="TrackMeta_MouseMove" MouseLeftButtonDown="TrackMeta_MouseLeftButtonDown" MouseLeftButtonUp="TrackMeta_MouseLeftButtonUp" MouseLeave="TrackMeta_MouseLeave"/>
-                    <local:TrackMeta Height="100" Width="100" Text="track 2 - ces.srt" MouseMove="TrackMeta_MouseMove" MouseLeftButtonDown="TrackMeta_MouseLeftButtonDown" MouseLeftButtonUp="TrackMeta_MouseLeftButtonUp" MouseLeave="TrackMeta_MouseLeave"/>-->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
+                <StackPanel Grid.Column="0" x:Name="stackMeta">
                 </StackPanel>
 
-                <ScrollViewer x:Name="svHor" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="100,0,0,0" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
-                    <StackPanel x:Name="stack">
-                        <!--<Grid x:Name="track1" Height="100" HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <local:Chunk Width="200" Margin="0,0,0,0"  HorizontalAlignment="Left" VerticalAlignment="Stretch" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave"/>
-                            <local:Chunk Width="200" Margin="500,0,0,0"  HorizontalAlignment="Left" VerticalAlignment="Stretch" Text="aaaaaBudu jeden z nich ukrást." MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave"/>
-                            <local:Chunk Width="200" Margin="700,0,0,0"  HorizontalAlignment="Left" VerticalAlignment="Stretch" Text="- Chceš další vejce?" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave"/>
-
-                        </Grid>
-                        <Grid x:Name="track2" Height="100" HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <local:Chunk Width="200" Margin="0,0,0,0"  HorizontalAlignment="Left" VerticalAlignment="Stretch" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave"/>
-                            <local:Chunk Width="200" Margin="500,0,0,0"  HorizontalAlignment="Left" VerticalAlignment="Stretch" Text="bbbbBudu jeden z nich ukrást." MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave"/>
-                            <local:Chunk Width="200" Margin="700,0,0,0"  HorizontalAlignment="Left" VerticalAlignment="Stretch" Text="- Chceš další vejce?" MouseMove="grid_MouseMove" MouseLeftButtonDown="grid_MouseLeftButtonDown" MouseLeftButtonUp="grid_MouseLeftButtonUp" MouseLeave="grid_MouseLeave"/>
-
-                        </Grid>-->
-                    </StackPanel>
+                <ScrollViewer Grid.Column="1" x:Name="svHor" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,17" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
+                    <StackPanel x:Name="stack"/>
                 </ScrollViewer>
-                <Rectangle Fill="#FF3D3D3D" Width="15" Margin="0,0,0,0" Height="17" VerticalAlignment="Bottom" HorizontalAlignment="Right" />
 
+                <Rectangle Fill="#FF3D3D3D" Width="15" Margin="0,0,0,0" Height="17" VerticalAlignment="Bottom" HorizontalAlignment="Right" />
             </Grid>
         </ScrollViewer>
         <ScrollBar x:Name="scrollbar" Orientation="Horizontal" VerticalAlignment="Bottom" Scroll="ScrollBar_Scroll" Margin="100,0,15,0" Height="17" />
