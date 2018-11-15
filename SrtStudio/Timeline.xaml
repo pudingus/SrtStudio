@@ -22,11 +22,27 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" x:Name="stackMeta">
+                <StackPanel Grid.Column="0" x:Name="stackMeta" Margin="0,20,0,0">
                 </StackPanel>
 
-                <ScrollViewer Grid.Column="1" x:Name="svHor" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,17" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
-                    <StackPanel x:Name="stack"/>
+                <ScrollViewer Grid.Column="1" x:Name="svHor" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,17" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
+                    <Grid>
+                        <Rectangle x:Name="seekbar" Height="20" Cursor="ScrollWE" VerticalAlignment="Top" HorizontalAlignment="Stretch" MouseLeftButtonDown="seekbar_MouseLeftButtonDown" MouseLeftButtonUp="seekbar_MouseLeftButtonUp" MouseMove="seekbar_MouseMove">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#FF212121" Offset="0"/>
+                                    <GradientStop Color="#FF2C2C2C" Offset="0.884"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+
+                        <!--track stack-->
+                        <StackPanel Margin="0,20,0,0" x:Name="stack">
+                        </StackPanel>
+                        <Rectangle x:Name="needle" Fill="White" Width="1" Margin="30,0,0,0" IsHitTestVisible="False" VerticalAlignment="Stretch" HorizontalAlignment="Left"></Rectangle>
+
+
+                    </Grid>
                 </ScrollViewer>
 
                 <Rectangle Fill="#FF3D3D3D" Width="15" Margin="0,0,0,0" Height="17" VerticalAlignment="Bottom" HorizontalAlignment="Right" />

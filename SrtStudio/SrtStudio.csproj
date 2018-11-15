@@ -111,7 +111,7 @@
     <Compile Include="TrackMeta.xaml.cs">
       <DependentUpon>TrackMeta.xaml</DependentUpon>
     </Compile>
-    <Page Include="Blend.xaml">
+    <Page Include="themes\Blend.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -62,12 +62,14 @@ namespace SrtStudio
             timer.Tick += Timer_Tick;
 
 
-            TrackMeta = new TrackMeta(this);
-            TrackMeta.Height = _height;
-            TrackLine = new Grid();
-            TrackLine.Height = _height;
-            TrackLine.HorizontalAlignment = HorizontalAlignment.Left;
-            TrackLine.VerticalAlignment = VerticalAlignment.Stretch;
+            TrackMeta = new TrackMeta(this) {
+                Height = _height
+            };
+            TrackLine = new Grid {
+                Height = _height,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
             //TrackLine.itemsControl.ItemsSource = TrackLine.ChunksSuper;
 
             TrackLine.PreviewMouseMove += TrackLine_PreviewMouseMove;
@@ -127,7 +129,7 @@ namespace SrtStudio
 
         Point point;
 
-        int dragSize = 8;
+        const int dragSize = 8;
 
         bool beforetime = true;
         private void Timer_Tick(object sender, EventArgs e) {

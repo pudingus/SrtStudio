@@ -16,16 +16,18 @@ namespace SrtStudio
         public List<Subtitle> Subtitles { get; set; }
         public string RefTrackName { get; set; }
         public List<Subtitle> RefSubtitles { get; set; }
+        public double VideoPos { get; set; }
+        public double ScrollPos { get; set; }
     }
 
     public static class Project
     {
         public static string FileName { get; private set; }
         public static ProjectStorage Data { get; set; } = new ProjectStorage();
+
         public static void Read(string filename) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
             StreamReader reader = new StreamReader(filename);
-            //data = ser.Deserialize(reader) as ProjectStorage;
 
             using (FileStream stream = File.OpenRead(filename)) {
                 using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
@@ -35,16 +37,8 @@ namespace SrtStudio
             }
         }
 
-        //public static void Write(string filename) {
-        //    XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
-        //    StreamWriter writer = new StreamWriter(filename);
-        //    ser.Serialize(writer, data);
-        //}
-
         public static void Write(string filename) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
-            //StreamWriter writer = new StreamWriter(filename);
-            //ser.Serialize(writer, data);
 
             using (FileStream stream = File.Create(filename)) {
                 using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Compress)) {

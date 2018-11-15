@@ -20,29 +20,34 @@ namespace SrtStudio
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private string _number;
-        public string Number {
-            get { return _number; }
+        private int _index;
+        public int Index {
+            get { return _index; }
             set {
-                _number = value;
-                RaisePropertyChanged("Number");
+                _index = value;
+                RaisePropertyChanged("Index");
             }
         }
-        private string _start;
-        public string Start {
+        private TimeSpan _start;
+        public TimeSpan Start {
             get { return _start; }
             set {
                 _start = value;
                 RaisePropertyChanged("Start");
             }
         }
-        private string _dur;
-        public string Dur {
+        private TimeSpan _dur;
+        public TimeSpan Dur {
             get { return _dur; }
             set {
                 _dur = value;
                 RaisePropertyChanged("Dur");
+                UpdateCps();
             }
+        }
+        private double _cps;
+        public double CPS {
+            get { return _cps; }
         }
         private string _text;
         public string Text {
@@ -50,7 +55,7 @@ namespace SrtStudio
             set {
                 _text = value;
                 RaisePropertyChanged("Text");
-                Console.WriteLine("text changed");
+                UpdateCps();
             }
         }
 
@@ -72,8 +77,15 @@ namespace SrtStudio
             }
         }
 
+        private void UpdateCps() {
+            if (_text != null) {
+                _cps = _text.Length / _dur.TotalSeconds;
+                RaisePropertyChanged("CPS");
+            }
+
+        }
+
         public Chunk Chunk { get; set; }
-
-
+        public Subtitle Sub { get; set; }
     }
 }

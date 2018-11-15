@@ -22,6 +22,12 @@ namespace SrtStudio
     /// </summary>
     public partial class Timeline : UserControl {
 
+        public delegate void NeedleMoved();
+        public event NeedleMoved OnNeedleMoved;
+
+
+
+
 
         TrackMeta draggedMeta;
         int dragSize = 8;
@@ -29,8 +35,6 @@ namespace SrtStudio
 
         public Timeline() {
             InitializeComponent();
-
-
         }
 
 
@@ -129,11 +133,38 @@ namespace SrtStudio
             scrollbar.Maximum = sv.ScrollableWidth;
             scrollbar.ViewportSize = e.ViewportWidth;
             scrollbar.Value = e.HorizontalOffset;
+            //scrollbar.SmallChange = 1000;
+            //scrollbar.LargeChange = 1000;
         }
 
         private void ScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
         {
             svHor.ScrollToHorizontalOffset(e.NewValue);
+        }
+
+        bool seekbarDown = false;
+        private void seekbar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+
+            Point pointe = e.GetPosition(stack);
+            needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+            OnNeedleMoved?.Invoke();
+            seekbarDown = true;
+            Mouse.Capture(seekbar);
+        }
+
+        private void seekbar_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            if (seekbarDown) {
+                seekbarDown = false;
+                Mouse.Capture(null);
+            }
+        }
+
+        private void seekbar_MouseMove(object sender, MouseEventArgs e) {
+            if (seekbarDown) {
+                Point pointe = e.GetPosition(stack);
+                needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+                OnNeedleMoved?.Invoke();
+            }
         }
     }
 }

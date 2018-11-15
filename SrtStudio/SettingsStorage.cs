@@ -15,7 +15,7 @@ namespace SrtStudio {
     public static class Settings {
 
         public static SettingsStorage Data { get; private set; } = new SettingsStorage();
-        static string filename = "settings.xml";
+        const string filename = "settings.xml";
         public static void Read() {
             try {
                 using (StreamReader sr = new StreamReader(filename)) {

@@ -20,18 +20,6 @@ namespace SrtStudio
     /// </summary>
     public partial class Chunk : UserControl
     {
-        public Subtitle sub;
-        public Item Item { get; set; }
-        public string Text {
-            get { return textBlock.Text; }
-            set { textBlock.Text = value; }
-        }
-
-        public string Dur {
-            get { return textBlock_dur.Text; }
-            set { textBlock_dur.Text = value; }
-        }
-
         private bool _selected;
         public bool Selected {
             get { return _selected; }
@@ -52,8 +40,15 @@ namespace SrtStudio
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             Size size = e.NewSize;
-            if (size.Height < 70) textBlock_dur.Visibility = Visibility.Collapsed;
-            else textBlock_dur.Visibility = Visibility.Visible;
+            if (size.Height < 70) {
+                textBlock_dur.Visibility = Visibility.Collapsed;
+                textBlock_cps.Visibility = Visibility.Collapsed;
+            }
+            else {
+                textBlock_dur.Visibility = Visibility.Visible;
+                textBlock_cps.Visibility = Visibility.Visible;
+
+            }
         }
     }
 }

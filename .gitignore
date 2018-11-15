@@ -261,3 +261,10 @@ __pycache__/
 *.pyc
 /ClickHoldTimeTest
 /CompTest
+/Xceed.Wpf.Toolkit.LiveExplorer/
+/Xceed.Wpf.Toolkit/
+/Xceed.Wpf.DataGrid/
+/Xceed.Wpf.AvalonDock.Themes.VS2010/
+/Xceed.Wpf.AvalonDock.Themes.Metro/
+/Xceed.Wpf.AvalonDock.Themes.Aero/
+/TimespanFormatterTest/

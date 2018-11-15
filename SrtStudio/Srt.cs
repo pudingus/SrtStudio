@@ -28,7 +28,7 @@ namespace SrtStudio
         }
 
         [XmlAttribute]
-        public string Text { get; set; }
+        public string Text { get; set; } = "";
     }
 
     public static class Srt
@@ -99,7 +99,7 @@ namespace SrtStudio
                             (line[5] == ':') &&
                             (line[6] >= '0' && line[6] <= '9') &&
                             (line[7] >= '0' && line[7] <= '9') &&
-                            (line[8] >= ',') &&
+                            (line[8] == ',') &&
                             (line[9] >= '0' && line[9] <= '9') &&
                             (line[10] >= '0' && line[10] <= '9') &&
                             (line[11] >= '0' && line[11] <= '9'))
@@ -130,7 +130,7 @@ namespace SrtStudio
                             (line[5] == ':') &&
                             (line[6] >= '0' && line[6] <= '9') &&
                             (line[7] >= '0' && line[7] <= '9') &&
-                            (line[8] >= ',') &&
+                            (line[8] == ',') &&
                             (line[9] >= '0' && line[9] <= '9') &&
                             (line[10] >= '0' && line[10] <= '9') &&
                             (line[11] >= '0' && line[11] <= '9'))
