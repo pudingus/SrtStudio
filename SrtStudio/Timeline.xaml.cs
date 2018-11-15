@@ -38,18 +38,25 @@ namespace SrtStudio
         }
 
 
-        public void AddTrack(Track track) {
+        public void AddTrack(Track track, bool toBottom = false) {
             track.TrackMeta.MouseMove += TrackMeta_MouseMove;
             track.TrackMeta.MouseLeftButtonDown += TrackMeta_MouseLeftButtonDown;
             track.TrackMeta.MouseLeftButtonUp += TrackMeta_MouseLeftButtonUp;
             track.TrackMeta.MouseLeave += TrackMeta_MouseLeave;
 
-            //stack.Children.Add(track.TrackLine);
-            //stackMeta.Children.Add(track.TrackMeta);
+            if (toBottom) {
+                stack.Children.Add(track.TrackLine);
+                stackMeta.Children.Add(track.TrackMeta);
+            }
+            else {
+                stack.Children.Insert(0, track.TrackLine);
+                stackMeta.Children.Insert(0, track.TrackMeta);
+            }
+        }
 
-
-            stack.Children.Insert(0, track.TrackLine);
-            stackMeta.Children.Insert(0, track.TrackMeta);
+        public void RemoveTrack(Track track) {
+            stack.Children.Remove(track.TrackLine);
+            stackMeta.Children.Remove(track.TrackMeta);
         }
 
         public void ClearTracks() {

@@ -32,6 +32,20 @@ namespace SrtStudio {
         public ObservableCollection<Item> SuperList { get; set; } = new ObservableCollection<Item>();
 
         Track editTrack;
+        Track refTrack;
+
+
+        const string programName = "SrtStudio";
+        const int timescale = 10;   //one page is 'scale' (30) seconds
+        const int pixelscale = 1000;
+
+        const string srtFilter = "Srt - SubRip(*.srt)|*.srt";
+        const string projExt = "sprj";
+        const string projFilter = "SrtStudio Project (*.sprj)|*.sprj";
+        const string videoFilter = "Common video files (*.mkv;*.mp4;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts)|" +
+            "*.mkv;*.mp4;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts|" +
+            "All files (*.*)|*.*";
+
 
         public MainWindow() {
             DataContext = this;
@@ -56,12 +70,21 @@ namespace SrtStudio {
                 WindowState = WindowState.Maximized;
             }
 
-            //player.API.LoadConfigFile("D:\\mpv.conf");
+            //player.API.SetOptionString("no-sub", "");
+
+            string path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            string directory = System.IO.Path.GetDirectoryName(path);
+
+            //player.API.LoadConfigFile(System.IO.Path.Combine(directory, "mpv.conf"));
+
+
+            player.API.SetPropertyString("sid", "no");  //disable subtitles
         }
 
         private void listView_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
             if (((FrameworkElement)e.OriginalSource).DataContext is Item item && player.IsMediaLoaded) {
-                player.Position = item.Sub.Start;
+                //player.Position = item.Sub.Start;
+                Seek(item.Sub.Start);
             }
         }
 
@@ -100,7 +123,7 @@ namespace SrtStudio {
             }
         }
 
-        private void Seek(TimeSpan position, object except) {
+        private void Seek(TimeSpan position, object except = null) {
             slider.ValueChanged -= Slider_ValueChanged;
             timeline.OnNeedleMoved -= Timeline_OnNeedleMoved;
 
@@ -126,14 +149,20 @@ namespace SrtStudio {
             timeline.OnNeedleMoved += Timeline_OnNeedleMoved;
         }
 
-        Stopwatch sw = new Stopwatch();
         private void Player_PositionChanged(object sender, MpvPlayerPositionChangedEventArgs e) {
 
             Dispatcher.Invoke(() => {
                 if (player.IsPlaying) {
-                    Console.WriteLine("Player_PositionChanged " + sw.ElapsedMilliseconds);
-                    sw.Restart();
+                    var pos = e.NewPosition;
                     Seek(e.NewPosition, player);
+
+                    foreach (Item item in SuperList) {
+                        TimeSpan end = item.Start + item.Dur;
+                        if (pos >= item.Start && pos <= end) {
+                            listView.SelectedItem = item;
+                            break;
+                        }
+                    }
                 }
             });
         }
@@ -145,7 +174,6 @@ namespace SrtStudio {
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            Console.WriteLine("Slider_ValueChanged");
 
             if (player.IsMediaLoaded) {
                 double seconds = slider.Value / 100 * player.Duration.TotalSeconds;
@@ -154,42 +182,39 @@ namespace SrtStudio {
         }
 
         private void Timeline_OnNeedleMoved() {
-            Console.WriteLine("Timeline_OnNeedleMoved");
             double start = timeline.needle.Margin.Left / pixelscale * timescale;
             Seek(TimeSpan.FromSeconds(start), timeline);
         }
 
-
-        const int timescale = 10;   //one page is 'scale' (30) seconds
-        const int pixelscale = 1000;
-
-        private void LoadSubtitles(List<Subtitle> subtitles, string name) {
+        private void LoadSubtitles(List<Subtitle> subtitles, string trackName) {
+            SuperList.Clear();
+            if (editTrack != null)
+                timeline.RemoveTrack(editTrack);
             int i = 0;
 
             if (subtitles.Count <= 0) return;
 
             Track track = new Track {
-                Name = name
+                Name = trackName
             };
             editTrack = track;
             editTrack.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
 
-            timeline.AddTrack(track);
+            timeline.AddTrack(track, true);
             foreach (Subtitle sub in subtitles) {
                 i++;
-                TimeSpan duration = sub.End - sub.Start;
 
                 Item item = new Item {
                     Index = i,
                     Start = sub.Start,
-                    Dur = sub.End - sub.Start,
+                    End = sub.End,
                     Text = sub.Text,
                     Sub = sub
                 };
                 SuperList.Add(item);
 
-                double margin = sub.Start.TotalSeconds / timescale * pixelscale;
-                double width = duration.TotalSeconds / timescale * pixelscale;
+                double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                double width = item.Dur.TotalSeconds / timescale * pixelscale;
                 Chunk chunk = new Chunk {
                     Margin = new Thickness(margin, 0, 0, 0),
                     Width = width
@@ -204,30 +229,33 @@ namespace SrtStudio {
             editTrack.OnChunkUpdated += (chunk) => {
                 Item item = (Item)chunk.DataContext;
                 Subtitle sub = item.Sub;
-                Console.WriteLine("chunk updated");
 
                 double start = chunk.Margin.Left / pixelscale * timescale;
                 sub.Start = TimeSpan.FromSeconds(start);
                 item.Start = sub.Start;
 
                 double dur = chunk.Width / pixelscale * timescale;
-                item.Dur = TimeSpan.FromSeconds(dur);
 
                 double end = start + dur;
                 sub.End = TimeSpan.FromSeconds(end);
+                item.End = sub.End;
+
             };
         }
 
-        private void LoadRefSubtitles(List<Subtitle> subtitles, string name) {
+        private void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
+            if (refTrack != null)
+                timeline.RemoveTrack(refTrack);
             int i = 0;
 
             if (subtitles.Count <= 0) return;
 
             Track track = new Track {
-                Name = name,
+                Name = trackName,
                 Height = 50,
                 Locked = true
             };
+            refTrack = track;
 
             timeline.AddTrack(track);
 
@@ -250,14 +278,9 @@ namespace SrtStudio {
             }
         }
 
-
-
-        const string programName = "SrtStudio";
-
         private void UpdateTitle(string currentFile) {
             Title = currentFile + " - " + programName;
         }
-
 
         private void CloseProject() {
             SuperList.Clear();
@@ -274,18 +297,7 @@ namespace SrtStudio {
             Item item = (Item)textBox.DataContext;
             item.Sub.Text = textBox.Text;
             item.Text = textBox.Text;
-
-            Console.WriteLine("textbox textchanged");
         }
-
-        const string srtFilter = "Srt - SubRip(*.srt)|*.srt";
-        const string projExt = "sprj";
-        const string projFilter = "SrtStudio Project (*.sprj)|*.sprj";
-        const string videoFilter = "Common video files (*.mkv;*.mp4;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts)|" +
-            "*.mkv;*.mp4;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts|" +
-            "All files (*.*)|*.*";
-
-
 
         private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
             OpenFileDialog dialog = new OpenFileDialog {
@@ -296,7 +308,6 @@ namespace SrtStudio {
                 Project.Data.VideoPath = dialog.FileName;
             }
         }
-
 
         private void menuSrtImport_Click(object sender, RoutedEventArgs e) {
             OpenFileDialog dialog = new OpenFileDialog {
@@ -350,12 +361,11 @@ namespace SrtStudio {
                 LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
                 LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
 
-                Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
 
                 Task.Delay(200).ContinueWith(t => {
                     Dispatcher.Invoke(() => {
                         timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
-                        timeline.scrollbar.Value = Project.Data.ScrollPos;
+                        Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
 
                     });
                 });
@@ -410,6 +420,97 @@ namespace SrtStudio {
                     player.Pause();
                 else player.Resume();
             }
+        }
+
+        private void TextBox_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e) {
+            TextBox textBox = (TextBox)sender;
+
+            Task.Delay(20).ContinueWith(t => {
+                Dispatcher.Invoke(() => {
+                    textBox.Focus();
+                    textBox.CaretIndex = textBox.Text.Length;
+                });
+            });
+
+        }
+
+        private void RecalculateIndexes() {
+            foreach (Item item in SuperList) {
+                item.Index = SuperList.IndexOf(item) + 1;
+            }
+        }
+
+        private void ListView_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) {
+            //e.Handled = true;
+        }
+
+        private void MenuItemMerge_Click(object sender, RoutedEventArgs e) {
+            if (listView.SelectedItems.Count <= 1) return;
+
+            var sl = new List<Item>();
+            foreach (Item item in SuperList)
+                if (listView.SelectedItems.Contains(item)) sl.Add(item);
+
+            for (int i = 0; i < sl.Count-1; i++) {
+                Item item = sl[i];
+                Item nextItem = sl[i+1];
+                //next item is 'neighbor' to current item
+                if (nextItem.Index == item.Index + 1) {
+                    item.End = nextItem.End;
+                    item.Text += " " + nextItem.Text;
+                    SuperList.Remove(nextItem);
+
+                    double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                    double width = item.Dur.TotalSeconds / timescale * pixelscale;
+                    item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
+                    item.Chunk.Width = width;
+
+                    editTrack.RemoveChunk(nextItem.Chunk);
+
+                    i++;
+                }
+            }
+            RecalculateIndexes();
+        }
+
+        private void MenuItemMergeDialog_Click(object sender, RoutedEventArgs e) {
+            if (listView.SelectedItems.Count <= 1) return;
+
+            var sl = new List<Item>();
+            foreach (Item item in SuperList)
+                if (listView.SelectedItems.Contains(item)) sl.Add(item);
+
+            for (int i = 0; i < sl.Count-1; i++) {
+                Item item = sl[i];
+                Item nextItem = sl[i+1];
+                //next item is 'neighbor' to current item
+                if (nextItem.Index == item.Index + 1) {
+                    item.End = nextItem.End;
+                    item.Text = "-" + item.Text + Environment.NewLine + "-" + nextItem.Text;
+                    SuperList.Remove(nextItem);
+
+                    double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                    double width = item.Dur.TotalSeconds / timescale * pixelscale;
+                    item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
+                    item.Chunk.Width = width;
+
+                    editTrack.RemoveChunk(nextItem.Chunk);
+
+                    i++;
+                }
+            }
+            RecalculateIndexes();
+        }
+
+        private void MenuItemDelete_Click(object sender, RoutedEventArgs e) {
+            var copy = new List<Item>();
+            foreach (Item item in listView.SelectedItems) copy.Add(item);
+
+            foreach (Item item in copy) {
+                SuperList.Remove(item);
+                editTrack.RemoveChunk(item.Chunk);
+            }
+            RecalculateIndexes();
         }
     }
 }

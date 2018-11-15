@@ -289,7 +289,7 @@
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderBrush" Value="{DynamicResource MCTextBox}"/>
         <!--<Setter Property="ContextMenu" Value="{StaticResource TextBoxContextMenu}" />-->
-        <Setter Property="SelectionBrush" Value="{DynamicResource SelectedBrush}" />
+        <!--<Setter Property="SelectionBrush" Value="{DynamicResource SelectedBrush}" />-->
         <Setter Property="FontSize" Value="{DynamicResource DefaultFontSize}" />
         <Setter Property="MinHeight" Value="22" />
         <Setter Property="BorderThickness" Value="1"/>
@@ -367,7 +367,7 @@
 
 
     <!--Listviewitem-->
-    <Style TargetType="ListViewItem">
+    <Style TargetType="ListViewItem" x:Key="Ikea">
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="0"/>

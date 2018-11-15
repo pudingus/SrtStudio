@@ -118,6 +118,10 @@ namespace SrtStudio
             //TrackLine.ChunksSuper.Add(chunk);
         }
 
+        public void RemoveChunk(Chunk chunk) {
+            TrackLine.Children.Remove(chunk);
+        }
+
         Chunk draggedChunk;
         DraggingPoint draggingPoint;
 

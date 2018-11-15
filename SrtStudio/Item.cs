@@ -34,24 +34,48 @@ namespace SrtStudio
             set {
                 _start = value;
                 RaisePropertyChanged("Start");
+                UpdateDur();
             }
         }
-        private TimeSpan _dur;
-        public TimeSpan Dur {
-            get { return _dur; }
+
+        private TimeSpan _end;
+        public TimeSpan End {
+            get => _end;
             set {
-                _dur = value;
+                _end = value;
+                RaisePropertyChanged("End");
+                UpdateDur();
+            }
+        }
+
+
+        private TimeSpan _dur;
+        public TimeSpan Dur { get => _dur; }
+
+        private void UpdateDur() {
+            TimeSpan dur = _end - _start;
+            if (dur.CompareTo(_dur) != 0) { //not the same
+                _dur = dur;
                 RaisePropertyChanged("Dur");
                 UpdateCps();
             }
         }
+
+
         private double _cps;
-        public double CPS {
-            get { return _cps; }
+        public double CPS { get => _cps; }
+
+        private void UpdateCps() {
+            if (_text != null) {
+                _cps = _text.Length / _dur.TotalSeconds;
+                RaisePropertyChanged("CPS");
+            }
         }
+
+
         private string _text;
         public string Text {
-            get { return _text; }
+            get => _text;
             set {
                 _text = value;
                 RaisePropertyChanged("Text");
@@ -77,13 +101,7 @@ namespace SrtStudio
             }
         }
 
-        private void UpdateCps() {
-            if (_text != null) {
-                _cps = _text.Length / _dur.TotalSeconds;
-                RaisePropertyChanged("CPS");
-            }
 
-        }
 
         public Chunk Chunk { get; set; }
         public Subtitle Sub { get; set; }
