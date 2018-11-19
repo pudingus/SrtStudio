@@ -16,7 +16,7 @@
     </Style>
 
 
-    <!--<Style TargetType="Label">
+    <Style TargetType="Label">
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
         <Setter Property="FontSize" Value="{DynamicResource DefaultFontSize}" />
         <Style.Triggers>
@@ -506,17 +506,17 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
             </Trigger>
         </Style.Triggers>
-    </Style>-->
-    
-    
-    
-    
-    
-    
-    
-    
+    </Style>
 
-    <!--<Style TargetType="RichTextBox">
+
+
+
+
+
+
+
+
+    <Style TargetType="RichTextBox">
         <Setter Property="BorderThickness" Value="{DynamicResource DefaultBorderThickness}" />
         <Setter Property="Background" Value="{DynamicResource DarkerBaseBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
@@ -622,10 +622,10 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>-->
+    </Style>
 
     <!-- Tab stuff-->
-    <!--<Style TargetType="{x:Type TabControl}">
+    <Style TargetType="{x:Type TabControl}">
         <Setter Property="Padding" Value="4,4,4,4"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -801,7 +801,7 @@
     </Style>
 
 
-    --><!-- ComboBox stuff--><!--
+    <!-- ComboBox stuff-->
     <Style x:Key="ComboBoxToggleButton" TargetType="{x:Type ToggleButton}">
         <Setter Property="OverridesDefaultStyle" Value="true"/>
         <Setter Property="BorderThickness" Value="0" />
@@ -827,13 +827,13 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="true">
-                            --><!--<Setter TargetName="Border" Property="Background" Value="{DynamicResource ButtonBackgroundPressedBrush}" />--><!--
+                            <!--<Setter TargetName="Border" Property="Background" Value="{DynamicResource ButtonBackgroundPressedBrush}" />-->
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="true">
                             <Setter Property="BorderBrush"  Value="{DynamicResource SelectedBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            --><!--<Setter TargetName="Border" Property="Background" Value="{DynamicResource BaseBrush}" />--><!--
+                            <!--<Setter TargetName="Border" Property="Background" Value="{DynamicResource BaseBrush}" />-->
                             <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource BaseBorderBrush}" />
                             <Setter Property="Foreground" Value="{DynamicResource DisabledBrush}"/>
                             <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource DisabledBrush}" />
@@ -1060,7 +1060,7 @@
                 <Setter Property="Template" Value="{StaticResource ComboBoxEditableTemplate}"/>
             </Trigger>
         </Style.Triggers>
-    </Style>-->
+    </Style>
 
 
 
@@ -1347,7 +1347,7 @@
 
     <!-- Listview stuff-->
 
-    <!--<Style x:Key="GridViewColumnHeaderGripper"  TargetType="Thumb">
+    <Style x:Key="GridViewColumnHeaderGripper"  TargetType="Thumb">
         <Setter Property="Width" Value="18"/>
         <Setter Property="Background" Value="{DynamicResource BaseBorderBrush}"/>
         <Setter Property="Template">
@@ -1587,12 +1587,12 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>-->
+    </Style>
 
 
 
     <!-- Menu stuff-->
-    <!--<Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+    <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Separator}">
@@ -1903,13 +1903,13 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
-    </Style>-->
+    </Style>
 
 
 
 
     <!-- Toolbar stuff-->
-    <!--<Style TargetType="{x:Type ToolBarTray}">
+    <Style TargetType="{x:Type ToolBarTray}">
         <Setter Property="Background" Value="{DynamicResource ToolBarTrayBackgroundBrush}" />
         <Style.Triggers>
             <Trigger Property="IsEnabled" Value="False">
@@ -2212,7 +2212,7 @@
         </Style.Triggers>
     </Style>
 
-    --><!-- slider stuff--><!--
+    <!-- slider stuff-->
     <Style x:Key="HorizontalSliderUpThumbStyle" TargetType="{x:Type Thumb}">
         <Setter Property="Focusable" Value="false"/>
         <Setter Property="OverridesDefaultStyle" Value="true"/>
@@ -2651,7 +2651,7 @@
     </Style>
 
 
-    --><!-- Listbox stuff--><!--
+    <!-- Listbox stuff-->
     <Style TargetType="{x:Type ListBox}">
         <Setter Property="Background" Value="{DynamicResource DarkerBaseBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BaseBorderBrush}"/>
@@ -2753,7 +2753,7 @@
         </Style.Triggers>
     </Style>
 
-    --><!-- Treeview stuff--><!--
+    <!-- Treeview stuff-->
     <Style x:Key="TreeViewItemFocusVisual">
         <Setter Property="Control.Template">
             <Setter.Value>
@@ -2940,7 +2940,7 @@
     </ControlTemplate>
 
 
-    --><!-- expander stuff--><!--
+    <!-- expander stuff-->
     <Style x:Key="ExpanderRightHeaderStyle" TargetType="{x:Type ToggleButton}">
         <Setter Property="Template">
             <Setter.Value>
@@ -3202,7 +3202,7 @@
     </Style>
 
 
-    --><!-- Calendar stuff--><!--
+    <!-- Calendar stuff-->
     <Style TargetType="{x:Type CalendarDayButton}" x:Key="CalendarDayButtonStyle">
         <Setter Property="MinWidth" Value="5"/>
         <Setter Property="Background" Value="Transparent" />
@@ -3598,7 +3598,7 @@
         <Setter Property="Background" Value="{DynamicResource BaseBrush}" />
         <Setter Property="CalendarDayButtonStyle" Value="{StaticResource CalendarDayButtonStyle}" />
         <Setter Property="CalendarButtonStyle" Value="{StaticResource CalendarButtonStyle}" />
-       --><!-- <Setter Property="CalendarItemStyle" Value="{StaticResource CalendarItemStyle}" />--><!--
+        <!-- <Setter Property="CalendarItemStyle" Value="{StaticResource CalendarItemStyle}" />-->
         <Setter Property="BorderBrush" Value="{DynamicResource BaseBorderBrush}" />
         <Setter Property="BorderThickness" Value="{DynamicResource DefaultBorderThickness}"/>
         <Setter Property="Template">
@@ -3616,7 +3616,7 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
             </Trigger>
         </Style.Triggers>
-    </Style>-->
+    </Style>
 
 
 

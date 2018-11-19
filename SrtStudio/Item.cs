@@ -20,6 +20,15 @@ namespace SrtStudio
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        public Subtitle Sub { get; }
+
+        public Item(Subtitle sub) {
+            this.Sub = sub;
+            this.UpdateDur();
+            this.UpdateCps();
+        }
+
+
         private int _index;
         public int Index {
             get { return _index; }
@@ -28,21 +37,19 @@ namespace SrtStudio
                 RaisePropertyChanged("Index");
             }
         }
-        private TimeSpan _start;
         public TimeSpan Start {
-            get { return _start; }
+            get => Sub.Start;
             set {
-                _start = value;
+                Sub.Start = value;
                 RaisePropertyChanged("Start");
                 UpdateDur();
             }
         }
 
-        private TimeSpan _end;
         public TimeSpan End {
-            get => _end;
+            get => Sub.End;
             set {
-                _end = value;
+                Sub.End = value;
                 RaisePropertyChanged("End");
                 UpdateDur();
             }
@@ -53,7 +60,7 @@ namespace SrtStudio
         public TimeSpan Dur { get => _dur; }
 
         private void UpdateDur() {
-            TimeSpan dur = _end - _start;
+            TimeSpan dur = End - Start;
             if (dur.CompareTo(_dur) != 0) { //not the same
                 _dur = dur;
                 RaisePropertyChanged("Dur");
@@ -66,18 +73,17 @@ namespace SrtStudio
         public double CPS { get => _cps; }
 
         private void UpdateCps() {
-            if (_text != null) {
-                _cps = _text.Length / _dur.TotalSeconds;
+            if (Text != null) {
+                _cps = Text.Length / _dur.TotalSeconds;
                 RaisePropertyChanged("CPS");
             }
         }
 
 
-        private string _text;
         public string Text {
-            get => _text;
+            get => Sub.Text;
             set {
-                _text = value;
+                Sub.Text = value;
                 RaisePropertyChanged("Text");
                 UpdateCps();
             }
@@ -104,6 +110,5 @@ namespace SrtStudio
 
 
         public Chunk Chunk { get; set; }
-        public Subtitle Sub { get; set; }
     }
 }

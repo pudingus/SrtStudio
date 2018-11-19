@@ -19,6 +19,8 @@ using System.Windows.Threading;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Collections;
+using System.IO;
 
 namespace SrtStudio {
     /// <summary>
@@ -54,7 +56,7 @@ namespace SrtStudio {
 
             player = new MpvPlayer(PlayerHost.Handle) {
                 Loop = true,
-                Volume = 50
+                Volume = 100
             };
 
             player.PositionChanged += Player_PositionChanged;
@@ -122,6 +124,59 @@ namespace SrtStudio {
                 item.Chunk.BringIntoView();
             }
         }
+
+        private void TextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e) {
+            Debug.WriteLine("textbox preview keydown");
+            System.Windows.Controls.TextBox textBox = (System.Windows.Controls.TextBox)sender;
+            if (e.Key != Key.F4)
+                return;
+            int caretIndex = textBox.CaretIndex;
+            string str = this.TrimSpaces(this.RemoveNewlines(textBox.Text).Insert(caretIndex, Environment.NewLine));
+            textBox.Text = str;
+            textBox.CaretIndex = caretIndex + 1;
+            e.Handled = true;
+        }
+
+        private string RemoveNewlines(string s) {
+            StringReader stringReader = new StringReader(s);
+            string str = "";
+            while ((s = stringReader.ReadLine()) != null) {
+                if (str != "")
+                    str += " ";
+                str += s;
+            }
+            return str;
+        }
+
+        private string TrimSpaces(string s) {
+            StringReader stringReader = new StringReader(s);
+            string paragraph = "";
+            while ((s = stringReader.ReadLine()) != null) {
+                s += " ";
+                string sentence = "";
+                while (s != "" && s[0] == ' ')
+                    s = s.Remove(0, 1);
+                while (s != "") {
+                    int length = s.IndexOf(' ');
+                    string word = s.Substring(0, length);
+                    if (sentence != "")
+                        sentence += " ";
+                    sentence += word;
+                    s = s.Remove(0, length + 1);
+                    while (s != "" && s[0] == ' ')
+                        s = s.Remove(0, 1);
+                }
+                if (paragraph != "")
+                    paragraph += Environment.NewLine;
+                paragraph += sentence;
+            }
+            return paragraph;
+        }
+
+        private void TextBox_SelectionChanged(object sender, RoutedEventArgs e) {
+            Debug.WriteLine(((TextBox)sender).CaretIndex);
+        }
+
 
         private void Seek(TimeSpan position, object except = null) {
             slider.ValueChanged -= Slider_ValueChanged;
@@ -204,12 +259,8 @@ namespace SrtStudio {
             foreach (Subtitle sub in subtitles) {
                 i++;
 
-                Item item = new Item {
-                    Index = i,
-                    Start = sub.Start,
-                    End = sub.End,
-                    Text = sub.Text,
-                    Sub = sub
+                Item item = new Item(sub) {
+                    Index = i
                 };
                 SuperList.Add(item);
 
@@ -265,9 +316,7 @@ namespace SrtStudio {
 
                 double margin = sub.Start.TotalSeconds / timescale * pixelscale;
                 double width = duration.TotalSeconds / timescale * pixelscale;
-                Item item = new Item {
-                    Text = sub.Text
-                };
+                Item item = new Item(sub);
                 Chunk chunk = new Chunk {
                     Margin = new Thickness(margin, 0, 0, 0),
                     Width = width,
@@ -420,6 +469,36 @@ namespace SrtStudio {
                     player.Pause();
                 else player.Resume();
             }
+            if (e.Key == Key.F2) {
+
+                Item beforeNeedle = null;
+                for (int index = SuperList.Count - 1; index >= 0; --index) {
+                    if (player.Position >= SuperList[index].Start) {
+                        beforeNeedle = SuperList[index];
+                        break;
+                    }
+                }
+                if (beforeNeedle != null) {
+                    Subtitle sub = new Subtitle() {
+                        Start = player.Position,
+                        End = player.Position + TimeSpan.FromSeconds(1.5),
+                        Text = ""
+                    };
+                    Project.Data.Subtitles.Insert(beforeNeedle.Index, sub);
+                    Item obj2 = new Item(sub);
+                    SuperList.Insert(beforeNeedle.Index, obj2);
+                    RecalculateIndexes();
+                    double left = obj2.Start.TotalSeconds / 10.0 * 1000.0;
+                    double num = obj2.Dur.TotalSeconds / 10.0 * 1000.0;
+                    Chunk chunk1 = new Chunk();
+                    chunk1.Margin = new Thickness(left, 0.0, 0.0, 0.0);
+                    chunk1.Width = num;
+                    Chunk chunk2 = chunk1;
+                    chunk2.DataContext = (object)obj2;
+                    obj2.Chunk = chunk2;
+                    editTrack.AddChunk(chunk2);
+                }
+            }
         }
 
         private void TextBox_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e) {
@@ -444,12 +523,10 @@ namespace SrtStudio {
             //e.Handled = true;
         }
 
-        private void MenuItemMerge_Click(object sender, RoutedEventArgs e) {
-            if (listView.SelectedItems.Count <= 1) return;
-
+        private void Merge(IList items, bool asDialog = false) {
             var sl = new List<Item>();
             foreach (Item item in SuperList)
-                if (listView.SelectedItems.Contains(item)) sl.Add(item);
+                if (items.Contains(item)) sl.Add(item);
 
             for (int i = 0; i < sl.Count-1; i++) {
                 Item item = sl[i];
@@ -457,7 +534,11 @@ namespace SrtStudio {
                 //next item is 'neighbor' to current item
                 if (nextItem.Index == item.Index + 1) {
                     item.End = nextItem.End;
-                    item.Text += " " + nextItem.Text;
+                    if (!asDialog)
+                        item.Text += " " + nextItem.Text;
+                    else
+                        item.Text = "-" + item.Text + Environment.NewLine + "-" + nextItem.Text;
+
                     SuperList.Remove(nextItem);
 
                     double margin = item.Start.TotalSeconds / timescale * pixelscale;
@@ -473,33 +554,16 @@ namespace SrtStudio {
             RecalculateIndexes();
         }
 
+        private void MenuItemMerge_Click(object sender, RoutedEventArgs e) {
+            if (listView.SelectedItems.Count <= 1) return;
+
+            Merge(listView.SelectedItems);
+        }
+
         private void MenuItemMergeDialog_Click(object sender, RoutedEventArgs e) {
             if (listView.SelectedItems.Count <= 1) return;
 
-            var sl = new List<Item>();
-            foreach (Item item in SuperList)
-                if (listView.SelectedItems.Contains(item)) sl.Add(item);
-
-            for (int i = 0; i < sl.Count-1; i++) {
-                Item item = sl[i];
-                Item nextItem = sl[i+1];
-                //next item is 'neighbor' to current item
-                if (nextItem.Index == item.Index + 1) {
-                    item.End = nextItem.End;
-                    item.Text = "-" + item.Text + Environment.NewLine + "-" + nextItem.Text;
-                    SuperList.Remove(nextItem);
-
-                    double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                    double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                    item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
-                    item.Chunk.Width = width;
-
-                    editTrack.RemoveChunk(nextItem.Chunk);
-
-                    i++;
-                }
-            }
-            RecalculateIndexes();
+            Merge(listView.SelectedItems, true);
         }
 
         private void MenuItemDelete_Click(object sender, RoutedEventArgs e) {
@@ -511,6 +575,48 @@ namespace SrtStudio {
                 editTrack.RemoveChunk(item.Chunk);
             }
             RecalculateIndexes();
+        }
+
+        private void ListViewItem_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+            ListViewItem listViewItem = (ListViewItem)sender;
+            Item dataContext = (Item)listViewItem.DataContext;
+            ContextMenu contextMenu = listViewItem.ContextMenu;
+            MenuItem menuItem1 = (MenuItem)contextMenu.Items[0];
+            MenuItem menuItem2 = (MenuItem)contextMenu.Items[1];
+            MenuItem menuItem3 = (MenuItem)contextMenu.Items[2];
+            menuItem1.IsEnabled = false;
+            menuItem2.IsEnabled = false;
+            menuItem3.IsEnabled = false;
+            if (!listView.SelectedItems.Contains(dataContext))
+                return;
+            int count = listView.SelectedItems.Count;
+            if (count >= 1)
+                menuItem3.IsEnabled = true;
+            if (count >= 2) {
+                menuItem1.IsEnabled = true;
+                menuItem2.IsEnabled = true;
+            }
+        }
+
+        private void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+            Chunk chunk = (Chunk)sender;
+            Item dataContext = (Item)chunk.DataContext;
+            ContextMenu contextMenu = chunk.ContextMenu;
+            MenuItem menuItem1 = (MenuItem)contextMenu.Items[0];
+            MenuItem menuItem2 = (MenuItem)contextMenu.Items[1];
+            MenuItem menuItem3 = (MenuItem)contextMenu.Items[2];
+            menuItem1.IsEnabled = false;
+            menuItem2.IsEnabled = false;
+            menuItem3.IsEnabled = false;
+            if (!listView.SelectedItems.Contains(dataContext))
+                return;
+            int count = listView.SelectedItems.Count;
+            if (count >= 1)
+                menuItem3.IsEnabled = true;
+            if (count >= 2) {
+                menuItem1.IsEnabled = true;
+                menuItem2.IsEnabled = true;
+            }
         }
     }
 }
