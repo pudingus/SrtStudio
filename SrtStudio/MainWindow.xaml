@@ -122,7 +122,7 @@
                         <xcad:LayoutAnchorablePane DockWidth="3*">
                             <xcad:LayoutAnchorable ContentId="video" Title="Video" >
                                 <Grid x:Name="videoGrid">
-                                    <!--<airhack:AirControl x:Name="airControl"></airhack:AirControl>-->
+                                    <airhack:AirControl x:Name="airControl"></airhack:AirControl>
 
                                     <WindowsFormsHost x:Name="wfHost" Margin="0,0,0,29">
                                         <windowsForms:Panel x:Name="PlayerHost" />

@@ -18,6 +18,7 @@ namespace SrtStudio
         public List<Subtitle> RefSubtitles { get; set; }
         public double VideoPos { get; set; }
         public double ScrollPos { get; set; }
+        public int SelIndex { get; set; }
     }
 
     public static class Project

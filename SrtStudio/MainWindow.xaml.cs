@@ -21,6 +21,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Collections;
 using System.IO;
+using System.Windows.Markup;
+using System.Globalization;
 
 namespace SrtStudio {
     /// <summary>
@@ -48,11 +50,13 @@ namespace SrtStudio {
             "*.mkv;*.mp4;*.avi;*.flv;*.webm;*.mov;*.m4v;*.3gp;*.wmv;*.ts|" +
             "All files (*.*)|*.*";
 
+        ContextMenu contextMenu;
 
         public MainWindow() {
             DataContext = this;
 
             InitializeComponent();
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), (PropertyMetadata)new FrameworkPropertyMetadata((object)XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
             player = new MpvPlayer(PlayerHost.Handle) {
                 Loop = true,
@@ -81,6 +85,12 @@ namespace SrtStudio {
 
 
             player.API.SetPropertyString("sid", "no");  //disable subtitles
+
+            videoGrid.Children.Remove(wfHost);
+            videoGrid.Children.Remove(topGrid);
+            airControl.Back = wfHost;
+            airControl.Front = topGrid;
+            contextMenu = (ContextMenu)FindResource("ItemContextMenu");
         }
 
         private void listView_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
@@ -271,10 +281,14 @@ namespace SrtStudio {
                     Width = width
                 };
                 chunk.DataContext = item;
+                chunk.ContextMenu = this.contextMenu;
+                chunk.ContextMenuOpening += new ContextMenuEventHandler(this.Chunk_ContextMenuOpening);
 
                 item.Chunk = chunk;
 
                 track.AddChunk(chunk);
+
+
             }
 
             editTrack.OnChunkUpdated += (chunk) => {
@@ -282,14 +296,15 @@ namespace SrtStudio {
                 Subtitle sub = item.Sub;
 
                 double start = chunk.Margin.Left / pixelscale * timescale;
-                sub.Start = TimeSpan.FromSeconds(start);
-                item.Start = sub.Start;
+                item.Start = TimeSpan.FromSeconds(start);
 
                 double dur = chunk.Width / pixelscale * timescale;
 
                 double end = start + dur;
-                sub.End = TimeSpan.FromSeconds(end);
-                item.End = sub.End;
+                item.End = TimeSpan.FromSeconds(end);
+
+                this.unsavedChanges = true;
+                this.UpdateTitle(this._currentFile);
 
             };
         }
@@ -326,9 +341,22 @@ namespace SrtStudio {
                 track.AddChunk(chunk);
             }
         }
+        private bool unsavedChanges = false;
+        private string _currentFile = "";
 
         private void UpdateTitle(string currentFile) {
-            Title = currentFile + " - " + programName;
+            this._currentFile = currentFile;
+            string str = "";
+            if (this.unsavedChanges)
+                str = "*";
+            if (this.SuperList.Count > 0 && this.listView.SelectedIndex != -1) {
+                int num1 = this.listView.SelectedIndex + 1;
+                int count = this.SuperList.Count;
+                double num2 = (double)num1 / (double)count * 100.0;
+                this.Title = currentFile + str + " - SrtStudio - " + (object)num1 + "/" + (object)count + " - " + num2.ToString("N1") + " %";
+            }
+            else
+                this.Title = currentFile + str + " - SrtStudio";
         }
 
         private void CloseProject() {
@@ -346,6 +374,8 @@ namespace SrtStudio {
             Item item = (Item)textBox.DataContext;
             item.Sub.Text = textBox.Text;
             item.Text = textBox.Text;
+            unsavedChanges = true;
+            UpdateTitle(_currentFile);
         }
 
         private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
@@ -430,13 +460,17 @@ namespace SrtStudio {
                 };
                 if (dialog.ShowDialog() == true) {
                     Project.Write(dialog.FileName);
-                    UpdateTitle(dialog.SafeFileName);
+                    this.unsavedChanges = false;
+                    this.UpdateTitle(dialog.SafeFileName);
                 }
             }
             else {
+                Project.Data.SelIndex = this.listView.SelectedIndex;
                 Project.Data.VideoPos = player.Position.TotalSeconds;
                 Project.Data.ScrollPos = timeline.scrollbar.Value;
                 Project.Write(Project.FileName);
+                this.unsavedChanges = false;
+                this.UpdateTitle(this._currentFile);
             }
         }
 
@@ -449,6 +483,8 @@ namespace SrtStudio {
             if (dialog.ShowDialog() == true) {
                 Project.Write(dialog.FileName);
                 UpdateTitle(dialog.SafeFileName);
+                this.unsavedChanges = false;
+                this.UpdateTitle(dialog.SafeFileName);
             }
         }
 
@@ -457,10 +493,15 @@ namespace SrtStudio {
         }
 
         private void Window_Closing(object sender, CancelEventArgs e) {
-            if (WindowState == WindowState.Maximized) {
-                Settings.Data.Maximized = true;
+            if (this.unsavedChanges && System.Windows.MessageBox.Show("There are unsaved changes. \nDo you really want to quit?", "Unsaved changes", MessageBoxButton.OKCancel, MessageBoxImage.Exclamation) == MessageBoxResult.Cancel) {
+                e.Cancel = true;
             }
-            Settings.Write();
+            else {
+                if (WindowState == WindowState.Maximized) {
+                    Settings.Data.Maximized = true;
+                }
+                Settings.Write();
+            }
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
