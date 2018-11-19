@@ -173,5 +173,19 @@ namespace SrtStudio
                 OnNeedleMoved?.Invoke();
             }
         }
+
+        private void Stack_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+
+        }
+
+        private void Stack_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+
+        }
+
+        private void UserControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            Point pointe = e.GetPosition(stack);
+            needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+            OnNeedleMoved?.Invoke();
+        }
     }
 }

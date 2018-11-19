@@ -23,9 +23,9 @@ namespace SrtStudio
         public Subtitle Sub { get; }
 
         public Item(Subtitle sub) {
-            this.Sub = sub;
-            this.UpdateDur();
-            this.UpdateCps();
+            Sub = sub;
+            UpdateDur();
+            UpdateCps();
         }
 
 
@@ -61,7 +61,7 @@ namespace SrtStudio
 
         private void UpdateDur() {
             TimeSpan dur = End - Start;
-            if (dur.CompareTo(_dur) != 0) { //not the same
+            if (dur !=_dur) {
                 _dur = dur;
                 RaisePropertyChanged("Dur");
                 UpdateCps();

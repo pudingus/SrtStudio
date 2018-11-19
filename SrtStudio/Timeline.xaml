@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:SrtStudio"
-             mc:Ignorable="d" d:DesignHeight="250" d:DesignWidth="1100" PreviewMouseMove="UserControl_PreviewMouseMove" >
+             mc:Ignorable="d" d:DesignHeight="250" d:DesignWidth="1100" PreviewMouseMove="UserControl_PreviewMouseMove" PreviewMouseLeftButtonUp="UserControl_PreviewMouseLeftButtonUp" >
     <Grid>
 
         <!--<StackPanel x:Name="newStack">
@@ -37,7 +37,7 @@
                         </Rectangle>
 
                         <!--track stack-->
-                        <StackPanel Margin="0,20,0,0" x:Name="stack">
+                        <StackPanel Margin="0,20,0,0" x:Name="stack" PreviewMouseLeftButtonDown="Stack_PreviewMouseLeftButtonDown" PreviewMouseLeftButtonUp="Stack_PreviewMouseLeftButtonUp">
                         </StackPanel>
                         <Rectangle x:Name="needle" Fill="White" Width="1" Margin="30,0,0,0" IsHitTestVisible="False" VerticalAlignment="Stretch" HorizontalAlignment="Left"></Rectangle>
 
