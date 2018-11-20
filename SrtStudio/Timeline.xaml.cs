@@ -33,7 +33,7 @@ namespace SrtStudio
 
 
         TrackMeta draggedMeta;
-        int dragSize = 8;
+        const int dragSize = 10;
         Point point;
 
 
@@ -100,6 +100,7 @@ namespace SrtStudio
             chunk.MouseLeftButtonUp += Chunk_MouseLeftButtonUp;
             chunk.MouseEnter += Chunk_MouseEnter;
             chunk.MouseLeave += Chunk_MouseLeave;
+            chunk.PreviewMouseDoubleClick += Chunk_PreviewMouseDoubleClick;
 
             if (track.Locked) {
                 chunk.Locked = true;
@@ -199,8 +200,12 @@ namespace SrtStudio
             if (draggedChunk != null) {
                 startdeltax = point.X - startPoint.X;
                 if (startdeltax >= 5.0 || startdeltax <= -5.0) {
-                    Debug.WriteLine("after point");
-                    afterPoint = true;
+                    Debug.WriteLine("after point " + DateTime.Now);
+                    if (afterPoint == false) {
+                        afterPoint = true;
+                        //deltax -= startdeltax;
+
+                    }
                 }
 
                 if (afterPoint) {
@@ -289,19 +294,48 @@ namespace SrtStudio
         }
 
 
-        private void UserControl_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
 
-            Point pointe = e.GetPosition(stack);
-            needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-            OnNeedleMoved?.Invoke();
+        private void UserControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            if (afterDblClick) {
+                afterDblClick = false;
+                return;
+            }
+            if (afterPoint && draggedChunk != null) return;
 
+
+            if (!afterPoint && draggedChunk != null) {
+                if (draggingPoint == DraggingPoint.Start) {
+                    needle.Margin = new Thickness(draggedChunk.Margin.Left, 0, 0, 0);
+                    OnNeedleMoved?.Invoke();
+                }
+                else if (draggingPoint == DraggingPoint.End) {
+                    needle.Margin = new Thickness(draggedChunk.Margin.Left + draggedChunk.Width, 0, 0, 0);
+                    OnNeedleMoved?.Invoke();
+                }
+                else {
+                    Point pointe = e.GetPosition(stack);
+                    needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+                    OnNeedleMoved?.Invoke();
+                }
+
+
+            }
+            if (!afterPoint &&draggedChunk == null) {
+                Point pointe = e.GetPosition(stack);
+                needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+                OnNeedleMoved?.Invoke();
+            }
         }
 
+        bool afterDblClick;
+        private void Chunk_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e) {
+            afterDblClick = true;
+            Chunk chunk = (Chunk)sender;
 
-
-
-
-
+            needle.Margin = new Thickness(chunk.Margin.Left, 0, 0, 0);
+            OnNeedleMoved?.Invoke();
+            e.Handled = true;
+        }
 
         private void Timer_Tick(object sender, EventArgs e) {
             beforetime = false;
@@ -322,8 +356,6 @@ namespace SrtStudio
                 }
             }
         }
-
-
 
         private void Chunk_MouseMove(object sender, MouseEventArgs e) {
             Chunk chunk = (Chunk)sender;
@@ -365,6 +397,7 @@ namespace SrtStudio
             Chunk chunk = (Chunk)sender;
             if (!chunk.Locked) {
                 Point pointc = e.GetPosition(chunk);
+                startPoint = e.GetPosition(stackMeta);
 
                 if (pointc.Y >= 0 && pointc.Y <= chunk.ActualHeight) {
                     if ((pointc.X >= 0 && pointc.X <= dragSize)) {
@@ -373,12 +406,13 @@ namespace SrtStudio
                         Mouse.Capture(chunk);
 
 
-                        startPoint = e.GetPosition(stack);
                     }
                     else if (pointc.X >= chunk.ActualWidth - dragSize && pointc.X <= chunk.ActualWidth) {
                         draggingPoint = DraggingPoint.End;
                         draggedChunk = chunk;
                         Mouse.Capture(chunk);
+                        startPoint = e.GetPosition(stackMeta);
+
                     }
                     else {
                         draggingPoint = DraggingPoint.Middle;
@@ -412,9 +446,6 @@ namespace SrtStudio
         private void Chunk_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             Chunk chunk = (Chunk)sender;
             if (!chunk.Locked) {
-                if (!afterPoint && draggedChunk != null) {
-                    e.Handled=true;
-                }
 
                 draggedChunk = null;
                 Mouse.Capture(null);
@@ -430,5 +461,6 @@ namespace SrtStudio
                 }
             }
         }
+
     }
 }

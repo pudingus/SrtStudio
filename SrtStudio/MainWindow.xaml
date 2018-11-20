@@ -1,17 +1,17 @@
 ﻿<Window
+        x:Class="SrtStudio.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtStudio"
         xmlns:s="clr-namespace:System;assembly=mscorlib"
-        x:Class="SrtStudio.MainWindow"
         xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
 	    xmlns:windowsForms="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
         xmlns:airhack="clr-namespace:Airhack;assembly=Airhack"
 
         mc:Ignorable="d"
-        Title="SrtStudio - Untitled" Height="493.385" Width="914.075" Background="#FF3A3A3A" Foreground="White" Closing="Window_Closing" PreviewKeyDown="Window_PreviewKeyDown">
+        Title="SrtStudio - Untitled" Height="493" Width="914" Background="#FF3A3A3A" Foreground="White" Closing="Window_Closing" PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <ContextMenu x:Key="ItemContextMenu">
             <MenuItem Header="Merge" Click="MenuItemMerge_Click"></MenuItem>
@@ -27,8 +27,8 @@
             <xcad:LayoutRoot x:Name="_layoutRoot">
                 <xcad:LayoutPanel Orientation="Vertical">
                     <xcad:LayoutPanel Orientation="Horizontal" DockHeight="5*">
-                        <xcad:LayoutPanel Orientation="Vertical" DockWidth="420">
-                            <xcad:LayoutAnchorablePane DockWidth="420">
+                        <xcad:LayoutPanel Orientation="Vertical" DockWidth="430">
+                            <xcad:LayoutAnchorablePane>
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
                                     <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged" MouseDoubleClick="listView_MouseDoubleClick">
                                         <ListView.Resources>
@@ -82,7 +82,7 @@
                                                                 Text="{Binding Text}"
                                                                 IsEnabled="{Binding Enabled}"
                                                                 IsHitTestVisible="{Binding Enabled}"
-                                                                MinWidth="190"
+                                                                MinWidth="215"
                                                                 Background="#00000000"
                                                                 AcceptsReturn="True"
                                                                 MaxLength="80"
