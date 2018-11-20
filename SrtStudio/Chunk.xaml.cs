@@ -36,7 +36,14 @@ namespace SrtStudio
             InitializeComponent();
             selBorder.Visibility = Visibility.Hidden;
             hilitBorder.Visibility = Visibility.Hidden;
+
+            //Item item = (Item)DataContext;
+            //item.PropertyChanged += Item_PropertyChanged;
         }
+
+        //private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+
+        //}
 
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
         {

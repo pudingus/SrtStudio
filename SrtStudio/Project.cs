@@ -26,11 +26,10 @@ namespace SrtStudio
         public static string FileName { get; private set; }
         public static ProjectStorage Data { get; set; } = new ProjectStorage();
 
-        public static void Read(string filename) {
+        public static void Read(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
-            StreamReader reader = new StreamReader(filename);
 
-            using (FileStream stream = File.OpenRead(filename)) {
+            using (FileStream stream = File.OpenRead(asBackup ? filename+".bak" : filename)) {
                 using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
                     Data = ser.Deserialize(zipStream) as ProjectStorage;
                     FileName = filename;
@@ -38,10 +37,10 @@ namespace SrtStudio
             }
         }
 
-        public static void Write(string filename) {
+        public static void Write(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
 
-            using (FileStream stream = File.Create(filename)) {
+            using (FileStream stream = File.Create(asBackup ? filename+".bak" : filename)) {
                 using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Compress)) {
                     ser.Serialize(zipStream, Data);
                     FileName = filename;

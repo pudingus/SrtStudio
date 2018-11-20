@@ -47,6 +47,8 @@ namespace SrtStudio
         Chunk draggedChunk;
         DraggingPoint draggingPoint;
 
+        public ObservableCollection<Item> SuperSource { get; set; }
+
         public enum DraggingPoint {
             Start,
             Middle,
@@ -57,7 +59,7 @@ namespace SrtStudio
         public Timeline() {
             InitializeComponent();
 
-            SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+            //SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
 
 
             timer.Interval = new TimeSpan(0, 0, 0, 0, 150);
@@ -261,11 +263,17 @@ namespace SrtStudio
             scrollbar.Value = e.HorizontalOffset;
             //scrollbar.SmallChange = 1000;
             //scrollbar.LargeChange = 1000;
+
+            Console.WriteLine("scroll changed");
+            Console.WriteLine(e.ViewportWidth);
+            Console.WriteLine(e.HorizontalOffset);
+            Console.WriteLine(e.ExtentWidth);
+            Console.WriteLine(sv.ScrollableWidth);
         }
 
         private void ScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
         {
-            svHor.ScrollToHorizontalOffset(e.NewValue);
+            //svHor.ScrollToHorizontalOffset(e.NewValue);
         }
 
         bool seekbarDown = false;
@@ -343,19 +351,19 @@ namespace SrtStudio
         }
 
 
-        private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
-            if (e.OldItems != null) {
-                foreach (Chunk chunk in e.OldItems) {
-                    chunk.Selected = false;
-                }
-            }
+        //private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
+        //    if (e.OldItems != null) {
+        //        foreach (Chunk chunk in e.OldItems) {
+        //            chunk.Selected = false;
+        //        }
+        //    }
 
-            if (e.NewItems != null) {
-                foreach (Chunk chunk in e.NewItems) {
-                    chunk.Selected = true;
-                }
-            }
-        }
+        //    if (e.NewItems != null) {
+        //        foreach (Chunk chunk in e.NewItems) {
+        //            chunk.Selected = true;
+        //        }
+        //    }
+        //}
 
         private void Chunk_MouseMove(object sender, MouseEventArgs e) {
             Chunk chunk = (Chunk)sender;

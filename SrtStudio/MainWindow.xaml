@@ -20,6 +20,7 @@
         </ContextMenu>
     </Window.Resources>
     <Grid>
+
         <xcad:DockingManager x:Name="dockingManager" Margin="0,25,0,0">
             <xcad:DockingManager.Theme>
                 <xcad:Vs2013DarkTheme/>
@@ -30,7 +31,7 @@
                         <xcad:LayoutPanel Orientation="Vertical" DockWidth="430">
                             <xcad:LayoutAnchorablePane>
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged" MouseDoubleClick="listView_MouseDoubleClick">
+                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged" MouseDoubleClick="listView_MouseDoubleClick" TextInput="ListView_TextInput">
                                         <ListView.Resources>
 
                                         </ListView.Resources>
@@ -38,6 +39,9 @@
                                             <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource Ikea}" >
                                                 <Setter Property="ContextMenu" Value="{StaticResource ItemContextMenu}" />
                                                 <EventSetter Event="ContextMenuOpening" Handler="ListViewItem_ContextMenuOpening"/>
+                                                <EventSetter Event="TextInput" Handler="ListViewItem_TextInput"/>
+
+
                                             </Style>
                                         </ListView.ItemContainerStyle>
                                         <ListView.View>
@@ -177,6 +181,7 @@
                 <MenuItem x:Name="menuSrtExport" Header="Export..." Foreground="Black" Click="menuSrtExport_Click"/>
             </MenuItem>
         </Menu>
+        <Button Content="Button" HorizontalAlignment="Left" Margin="229,0,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click_1"/>
 
     </Grid>
 </Window>

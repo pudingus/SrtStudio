@@ -10,6 +10,8 @@ namespace SrtStudio {
     [Serializable]
     public class SettingsStorage {
         public bool Maximized { get; set; }
+        public bool SafelyExited { get; set; }
+        public string LastProject { get; set; }
     }
 
     public static class Settings {

@@ -25,6 +25,7 @@ using System.Windows.Markup;
 using System.Globalization;
 
 using static SrtStudio.StringOperations;
+using Path = System.IO.Path;
 
 namespace SrtStudio {
     /// <summary>
@@ -57,6 +58,10 @@ namespace SrtStudio {
         private bool unsavedChanges = false;
         private string _currentFile = "";
 
+        DispatcherTimer bakTimer = new DispatcherTimer() {
+            Interval = TimeSpan.FromMinutes(1.0)
+        };
+
         public MainWindow() {
             DataContext = this;
             InitializeComponent();
@@ -84,6 +89,27 @@ namespace SrtStudio {
             if (Settings.Data.Maximized) {
                 WindowState = WindowState.Maximized;
             }
+            if (!Settings.Data.SafelyExited && Settings.Data.LastProject != null) {
+                var result = MessageBox.Show(
+                    "Program didn't safely exit last time, \nDo you want to restore backup?",
+                    "Restore",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning
+                );
+                if (result == MessageBoxResult.Yes) {
+                    try {
+                        OpenProject(Settings.Data.LastProject);
+                    }
+                    catch (Exception) {
+                        MessageBox.Show("error");
+                    }
+
+                }
+            }
+            if (Settings.Data.SafelyExited) {
+                Settings.Data.SafelyExited = false;
+                Settings.Write();
+            }
 
             videoGrid.Children.Remove(wfHost);
             videoGrid.Children.Remove(topGrid);
@@ -93,34 +119,16 @@ namespace SrtStudio {
 
             timeline.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
             timeline.OnChunkUpdated += EditTrack_OnChunkUpdated;
+
+            bakTimer.Tick += BakTimer_Tick;
+            bakTimer.Start();
+
+            timeline.SuperSource = SuperList;
+
+            timeline.svHor.ScrollChanged += SvHor_ScrollChanged;
+
         }
 
-        #region Methods
-        private void Seek(TimeSpan position, object except = null) {
-            slider.ValueChanged -= Slider_ValueChanged;
-            timeline.OnNeedleMoved -= Timeline_OnNeedleMoved;
-
-            if (except != timeline) {
-                double margin = position.TotalSeconds / timescale * pixelscale;
-                timeline.needle.Margin = new Thickness(margin, 0, 0, 0);
-            }
-
-            if (except != slider) {
-                if (player.Duration.TotalSeconds != 0) {
-                    slider.Value = position.TotalSeconds / player.Duration.TotalSeconds * 100;
-                }
-            }
-
-            if (except != player) {
-                if (player.IsMediaLoaded) {
-                    //player.SeekAsync(position);
-                    player.Position = position;
-                }
-            }
-
-            slider.ValueChanged += Slider_ValueChanged;
-            timeline.OnNeedleMoved += Timeline_OnNeedleMoved;
-        }
 
         private void LoadSubtitles(List<Subtitle> subtitles, string trackName) {
             SuperList.Clear();
@@ -144,22 +152,199 @@ namespace SrtStudio {
                 };
                 SuperList.Add(item);
 
+                //double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                //double width = item.Dur.TotalSeconds / timescale * pixelscale;
+                //Chunk chunk = new Chunk {
+                //    Margin = new Thickness(margin, 0, 0, 0),
+                //    Width = width,
+                //    DataContext = item
+                //};
+                //chunk.ContextMenu = contextMenu;
+                //chunk.ContextMenuOpening += new ContextMenuEventHandler(Chunk_ContextMenuOpening);
+
+                //item.Chunk = chunk;
+
+                //timeline.AddChunk(chunk, track);
+            }
+
+            OutRight = new List<Item>(SuperList);
+            OutLeft = new List<Item>();
+            Streamed = new List<Item>();
+
+
+
+            Item lastItem = SuperList[SuperList.Count-1];
+            double margin = lastItem.Start.TotalSeconds / timescale * pixelscale;
+            double width = lastItem.Dur.TotalSeconds / timescale * pixelscale;
+
+            timeline.seekbar.MinWidth = margin + width;
+            //Chunk chunk = new Chunk {
+            //    Margin = new Thickness(margin, 0, 0, 0),
+            //    Width = width,
+            //    DataContext = lastItem
+            //};
+            //chunk.ContextMenu = contextMenu;
+            //chunk.ContextMenuOpening += new ContextMenuEventHandler(Chunk_ContextMenuOpening);
+            //timeline.AddChunk(chunk, track);
+
+
+            //OutRight.Remove(lastItem);
+            //Streamed.Add(lastItem);
+        }
+
+        List<Item> OutRight;
+        List<Item> OutLeft;
+        List<Item> Streamed;
+
+
+        private void SvHor_ScrollChanged(object sender, ScrollChangedEventArgs e) {
+            if (SuperList.Count < 1) return;
+            Console.WriteLine("give me everything you got");
+
+
+            double val = timeline.svHor.HorizontalOffset / pixelscale * timescale;
+            TimeSpan horizonLeft = TimeSpan.FromSeconds(val);
+            val = (timeline.svHor.ViewportWidth + timeline.svHor.HorizontalOffset) / pixelscale * timescale;
+            TimeSpan horizonRight = TimeSpan.FromSeconds(val);
+
+            var copy = new List<Item>(OutRight);
+
+            foreach (Item item in copy) {
+                if (item.Start > horizonRight) break;
+
+                OutRight.Remove(item);
+                Streamed.Add(item);
+
                 double margin = item.Start.TotalSeconds / timescale * pixelscale;
                 double width = item.Dur.TotalSeconds / timescale * pixelscale;
                 Chunk chunk = new Chunk {
                     Margin = new Thickness(margin, 0, 0, 0),
-                    Width = width
+                    Width = width,
+                    DataContext = item
                 };
-                chunk.DataContext = item;
-                chunk.ContextMenu = contextMenu;
-                chunk.ContextMenuOpening += new ContextMenuEventHandler(Chunk_ContextMenuOpening);
-
                 item.Chunk = chunk;
+                timeline.AddChunk(chunk, editTrack);
+            }
 
-                timeline.AddChunk(chunk, track);
+
+
+            copy = new List<Item>(Streamed);
+            foreach (Item item in copy) {
+                if (item.End > horizonLeft) break; //pokud je položka ve vzestupné kolekci nad horizontem, další musí být taky, takže pryč odsud
+                OutLeft.Insert(0, item);
+                Streamed.Remove(item);
+                timeline.RemoveChunk(item.Chunk, editTrack);
+            }
+
+            for (int i = copy.Count - 1; i >= 0; i--) {
+                Item item = copy[i];
+                if (item.Start < horizonRight) break;
+                OutRight.Insert(0, item);
+                Streamed.Remove(item);
+                timeline.RemoveChunk(item.Chunk, editTrack);
+            }
+
+            copy = new List<Item>(OutLeft);
+            foreach (Item item in copy) {
+                if (item.End < horizonLeft) break;
+                OutLeft.Remove(item);
+                Streamed.Insert(0, item);
+
+                double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                double width = item.Dur.TotalSeconds / timescale * pixelscale;
+                Chunk chunk = new Chunk {
+                    Margin = new Thickness(margin, 0, 0, 0),
+                    Width = width,
+                    DataContext = item
+                };
+                item.Chunk = chunk;
+                timeline.AddChunk(chunk, editTrack);
+            }
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e) {
+            Console.WriteLine("give me everything you got");
+
+            double horizonD = (timeline.svHor.ViewportWidth + timeline.svHor.HorizontalOffset) / pixelscale * timescale;
+            TimeSpan horizon = TimeSpan.FromSeconds(horizonD);
+
+            var copy = new List<Item>(OutRight);
+
+
+            foreach (Item item in copy) {
+                if (item.Start > horizon) break;
+
+                OutRight.Remove(item);
+
+                double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                double width = item.Dur.TotalSeconds / timescale * pixelscale;
+                Chunk chunk = new Chunk {
+                    Margin = new Thickness(margin, 0, 0, 0),
+                    Width = width,
+                    DataContext = item
+                };
+                timeline.AddChunk(chunk, editTrack);
+            }
+        }
+
+        private void BakTimer_Tick(object sender, EventArgs e) {
+            //MessageBox.Show("saving...");
+            try {
+                Project.Write(Project.FileName, true);
+            }
+            catch (IOException) {
+                MessageBox.Show("IOException Error");
             }
 
         }
+
+        #region Methods
+
+        Item underNeedle;
+        private void Seek(TimeSpan position, object except = null) {
+            slider.ValueChanged -= Slider_ValueChanged;
+            timeline.OnNeedleMoved -= Timeline_OnNeedleMoved;
+
+            if (except != timeline) {
+                double margin = position.TotalSeconds / timescale * pixelscale;
+                timeline.needle.Margin = new Thickness(margin, 0, 0, 0);
+            }
+
+            if (except != slider) {
+                if (player.Duration.TotalSeconds != 0) {
+                    slider.Value = position.TotalSeconds / player.Duration.TotalSeconds * 100;
+                }
+            }
+
+            if (except != player) {
+                if (player.IsMediaLoaded) {
+                    //player.SeekAsync(position);
+                    player.Position = position;
+                }
+            }
+            string str = "";
+            underNeedle = null;
+
+            foreach (Item item in SuperList) {
+                if (position >= item.Start && position <= item.End) {
+                    if (player.IsPlaying && item != underNeedle) {
+                        listView.SelectionMode = SelectionMode.Single;
+                        listView.SelectedItem = item;
+                        listView.SelectionMode = SelectionMode.Extended;
+                    }
+                    str = item.Text;
+                    underNeedle = item;
+                    break;
+                }
+            }
+            subDisplay.Text = str;
+
+
+
+            slider.ValueChanged += Slider_ValueChanged;
+            timeline.OnNeedleMoved += Timeline_OnNeedleMoved;
+        }
+
 
         private void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
             if (refTrack != null)
@@ -177,21 +362,21 @@ namespace SrtStudio {
 
             timeline.AddTrack(track);
 
-            foreach (Subtitle sub in subtitles) {
-                i++;
-                TimeSpan duration = sub.End - sub.Start;
+            //foreach (Subtitle sub in subtitles) {
+            //    i++;
+            //    TimeSpan duration = sub.End - sub.Start;
 
-                double margin = sub.Start.TotalSeconds / timescale * pixelscale;
-                double width = duration.TotalSeconds / timescale * pixelscale;
-                Item item = new Item(sub);
-                Chunk chunk = new Chunk {
-                    Margin = new Thickness(margin, 0, 0, 0),
-                    Width = width,
-                    DataContext = item
-                };
+            //    double margin = sub.Start.TotalSeconds / timescale * pixelscale;
+            //    double width = duration.TotalSeconds / timescale * pixelscale;
+            //    Item item = new Item(sub);
+            //    Chunk chunk = new Chunk {
+            //        Margin = new Thickness(margin, 0, 0, 0),
+            //        Width = width,
+            //        DataContext = item
+            //    };
 
-                timeline.AddChunk(chunk, track);
-            }
+            //    timeline.AddChunk(chunk, track);
+            //}
         }
 
         private void UpdateTitle(string currentFile) {
@@ -211,7 +396,12 @@ namespace SrtStudio {
             Title = currentFile + str + " - SrtStudio - " + index + "/" + count + " - " + perc.ToString("N1") + " %";
         }
 
-        private void CloseProject() {
+        private bool CloseProject() {
+
+            if (unsavedChanges && UnsavedChangesDialog() == MessageBoxResult.Cancel) {
+                return false;
+            }
+
             SuperList.Clear();
             player.Stop();
             player.PlaylistClear();
@@ -219,6 +409,34 @@ namespace SrtStudio {
             Project.Data.Subtitles = null;
             Project.Data.RefSubtitles = null;
             UpdateTitle("Untitled");
+            return true;
+        }
+
+        private void OpenProject(string filename, bool asBackup = false) {
+            Project.Read(filename, asBackup);
+            UpdateTitle(Path.GetFileName(filename));
+            if (!string.IsNullOrEmpty(Project.Data.VideoPath))
+                player.Load(Project.Data.VideoPath);
+
+            LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
+            LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
+
+            Task.Delay(200).ContinueWith(t => {
+                Dispatcher.Invoke(() => {
+                    timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
+                    Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
+                });
+            });
+        }
+
+        private MessageBoxResult UnsavedChangesDialog() {
+            var result = MessageBox.Show(
+                "There are unsaved changes. \nDo you really want to quit?",
+                "Unsaved changes",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Exclamation
+            );
+            return result;
         }
 
         private void RecalculateIndexes() {
@@ -282,6 +500,7 @@ namespace SrtStudio {
         }
 
         private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
+            if (listView.SelectionMode == SelectionMode.Single) return;
             listView.SelectionChanged -= listView_SelectionChanged;
             foreach (Item item in listView.SelectedItems) {
                 item.Enabled = false;
@@ -342,8 +561,10 @@ namespace SrtStudio {
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e) {
             TextBox textBox = (TextBox)sender;
             Item item = (Item)textBox.DataContext;
-            item.Sub.Text = textBox.Text;
             item.Text = textBox.Text;
+            if (item == underNeedle) {
+                subDisplay.Text = item.Text;
+            }
             unsavedChanges = true;
             UpdateTitle(_currentFile);
         }
@@ -377,16 +598,7 @@ namespace SrtStudio {
         private void Player_PositionChanged(object sender, MpvPlayerPositionChangedEventArgs e) {
             Dispatcher.Invoke(() => {
                 if (player.IsPlaying) {
-                    var pos = e.NewPosition;
                     Seek(e.NewPosition, player);
-
-                    foreach (Item item in SuperList) {
-                        TimeSpan end = item.Start + item.Dur;
-                        if (pos >= item.Start && pos <= end) {
-                            listView.SelectedItem = item;
-                            break;
-                        }
-                    }
                 }
             });
         }
@@ -445,24 +657,10 @@ namespace SrtStudio {
             OpenFileDialog dialog = new OpenFileDialog {
                 Filter = projFilter
             };
-            if (dialog.ShowDialog() == true) {
-                CloseProject();
-                Project.Read(dialog.FileName);
-                UpdateTitle(dialog.SafeFileName);
-                if (!string.IsNullOrEmpty(Project.Data.VideoPath))
-                    player.Load(Project.Data.VideoPath);
-
-                LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
-                LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
-
-
-                Task.Delay(200).ContinueWith(t => {
-                    Dispatcher.Invoke(() => {
-                        timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
-                        Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
-
-                    });
-                });
+            if (dialog.ShowDialog() == true && CloseProject()) {
+                Settings.Data.LastProject = dialog.FileName;
+                Settings.Write();
+                OpenProject(dialog.FileName);
             }
         }
 
@@ -480,12 +678,12 @@ namespace SrtStudio {
                 }
             }
             else {
-                Project.Data.SelIndex = this.listView.SelectedIndex;
+                Project.Data.SelIndex = listView.SelectedIndex;
                 Project.Data.VideoPos = player.Position.TotalSeconds;
-                Project.Data.ScrollPos = timeline.scrollbar.Value;
+                Project.Data.ScrollPos = timeline.svHor.HorizontalOffset;
                 Project.Write(Project.FileName);
                 unsavedChanges = false;
-                UpdateTitle(this._currentFile);
+                UpdateTitle(_currentFile);
             }
         }
 
@@ -497,7 +695,6 @@ namespace SrtStudio {
             };
             if (dialog.ShowDialog() == true) {
                 Project.Write(dialog.FileName);
-                UpdateTitle(dialog.SafeFileName);
                 unsavedChanges = false;
                 UpdateTitle(dialog.SafeFileName);
             }
@@ -510,13 +707,15 @@ namespace SrtStudio {
 
         #region Window Events
         private void Window_Closing(object sender, CancelEventArgs e) {
-            if (unsavedChanges && MessageBox.Show("There are unsaved changes. \nDo you really want to quit?", "Unsaved changes", MessageBoxButton.OKCancel, MessageBoxImage.Exclamation) == MessageBoxResult.Cancel) {
+
+            if (unsavedChanges && UnsavedChangesDialog() == MessageBoxResult.Cancel) {
                 e.Cancel = true;
             }
             else {
                 if (WindowState == WindowState.Maximized) {
                     Settings.Data.Maximized = true;
                 }
+                Settings.Data.SafelyExited = true;
                 Settings.Write();
             }
         }
@@ -626,5 +825,14 @@ namespace SrtStudio {
             }
         }
         #endregion
+
+        private void ListView_TextInput(object sender, TextCompositionEventArgs e) {
+            Debug.WriteLine("text input");
+        }
+
+        private void ListViewItem_TextInput(object sender, TextCompositionEventArgs e) {
+            Debug.WriteLine("item text input");
+
+        }
     }
 }

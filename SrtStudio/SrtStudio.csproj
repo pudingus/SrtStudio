@@ -118,7 +118,7 @@
     <Compile Include="HtmlRichTextBox.cs" />
     <Compile Include="InlineTextBlock.cs" />
     <Compile Include="Item.cs" />
-    <Compile Include="SettingsStorage.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="Srt.cs" />
     <Compile Include="StringOperations.cs" />
     <Compile Include="Timeline.xaml.cs">
@@ -178,7 +178,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ProjectStorage.cs" />
+    <Compile Include="Project.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
