@@ -90,6 +90,9 @@ namespace SrtStudio {
             airControl.Back = wfHost;
             airControl.Front = topGrid;
             contextMenu = (ContextMenu)FindResource("ItemContextMenu");
+
+            timeline.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+            timeline.OnChunkUpdated += EditTrack_OnChunkUpdated;
         }
 
         #region Methods
@@ -131,7 +134,6 @@ namespace SrtStudio {
                 Name = trackName
             };
             editTrack = track;
-            editTrack.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
 
             timeline.AddTrack(track, true);
             foreach (Subtitle sub in subtitles) {
@@ -154,10 +156,9 @@ namespace SrtStudio {
 
                 item.Chunk = chunk;
 
-                track.AddChunk(chunk);
+                timeline.AddChunk(chunk, track);
             }
 
-            editTrack.OnChunkUpdated += EditTrack_OnChunkUpdated;
         }
 
         private void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
@@ -189,7 +190,7 @@ namespace SrtStudio {
                     DataContext = item
                 };
 
-                track.AddChunk(chunk);
+                timeline.AddChunk(chunk, track);
             }
         }
 
@@ -249,7 +250,7 @@ namespace SrtStudio {
                     item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
                     item.Chunk.Width = width;
 
-                    editTrack.RemoveChunk(nextItem.Chunk);
+                    timeline.RemoveChunk(nextItem.Chunk, editTrack);
 
                     i++;
                 }
@@ -286,7 +287,7 @@ namespace SrtStudio {
                 item.Enabled = false;
             }
             listView.SelectedItems.Clear();
-            foreach (Chunk chunk in editTrack.SelectedChunks) {
+            foreach (Chunk chunk in timeline.SelectedChunks) {
                 if (chunk != null) {
                     Item item = (Item)chunk.DataContext;
                     listView.SelectedItems.Add(item);
@@ -300,12 +301,12 @@ namespace SrtStudio {
         private void listView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             foreach (Item item in e.RemovedItems) {
                 item.Enabled = false;
-                editTrack.SelectedChunks.Remove(item.Chunk);
+                timeline.SelectedChunks.Remove(item.Chunk);
             }
 
             foreach (Item item in e.AddedItems) {
                 item.Enabled = true;
-                editTrack.SelectedChunks.Add(item.Chunk);
+                timeline.SelectedChunks.Add(item.Chunk);
 
                 item.Chunk.BringIntoView();
             }
@@ -553,7 +554,7 @@ namespace SrtStudio {
                     Chunk chunk2 = chunk1;
                     chunk2.DataContext = (object)obj2;
                     obj2.Chunk = chunk2;
-                    editTrack.AddChunk(chunk2);
+                    timeline.AddChunk(chunk2, editTrack);
                 }
             }
         }
@@ -578,7 +579,7 @@ namespace SrtStudio {
 
             foreach (Item item in copy) {
                 SuperList.Remove(item);
-                editTrack.RemoveChunk(item.Chunk);
+                timeline.RemoveChunk(item.Chunk, editTrack);
             }
             RecalculateIndexes();
         }

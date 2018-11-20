@@ -20,6 +20,7 @@ namespace SrtStudio
     /// </summary>
     public partial class Chunk : UserControl
     {
+        public bool Locked { get; set; }
         private bool _selected;
         public bool Selected {
             get { return _selected; }

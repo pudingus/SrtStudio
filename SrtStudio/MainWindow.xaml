@@ -30,7 +30,7 @@
                         <xcad:LayoutPanel Orientation="Vertical" DockWidth="420">
                             <xcad:LayoutAnchorablePane DockWidth="420">
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged" MouseDoubleClick="listView_MouseDoubleClick" PreviewMouseRightButtonDown="ListView_PreviewMouseRightButtonDown">
+                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged" MouseDoubleClick="listView_MouseDoubleClick">
                                         <ListView.Resources>
 
                                         </ListView.Resources>
