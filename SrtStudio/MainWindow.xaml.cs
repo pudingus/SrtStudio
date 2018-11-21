@@ -45,8 +45,7 @@ namespace SrtStudio {
 
 
         const string programName = "SrtStudio";
-        const int timescale = 10;   //one page is 'scale' (30) seconds
-        const int pixelscale = 1000;
+
 
         const string srtFilter = "Srt - SubRip(*.srt)|*.srt";
         const string projExt = "sprj";
@@ -120,15 +119,13 @@ namespace SrtStudio {
             contextMenu = (ContextMenu)FindResource("ItemContextMenu");
 
             timeline.SelectedItems.CollectionChanged += SelectedChunks_CollectionChanged;
-            timeline.OnChunkUpdated += EditTrack_OnChunkUpdated;
+            timeline.OnChunkUpdated += Timeline_OnChunkUpdated;
 
             bakTimer.Tick += BakTimer_Tick;
             bakTimer.Start();
 
-            timeline.SuperSource = SuperList;
-
-            timeline.svHor.ScrollChanged += SvHor_ScrollChanged;
-
+            timeline.ChunkContextMenuOpening += Chunk_ContextMenuOpening;
+            timeline.ChunkContextMenu = contextMenu;
         }
 
 
@@ -140,12 +137,10 @@ namespace SrtStudio {
 
             if (subtitles.Count <= 0) return;
 
-            if (editTrack != null) Tracks.Remove(editTrack);
             Track track = new Track {
                 Name = trackName
             };
             editTrack = track;
-            Tracks.Add(editTrack);
 
             timeline.AddTrack(track, true);
             foreach (Subtitle sub in subtitles) {
@@ -162,8 +157,8 @@ namespace SrtStudio {
 
 
             Item lastItem = SuperList[SuperList.Count-1];
-            double margin = lastItem.Start.TotalSeconds / timescale * pixelscale;
-            double width = lastItem.Dur.TotalSeconds / timescale * pixelscale;
+            double margin = lastItem.Start.TotalSeconds / timeline.timescale * timeline.pixelscale;
+            double width = lastItem.Dur.TotalSeconds / timeline.timescale * timeline.pixelscale;
 
             timeline.seekbar.MinWidth = margin + width;
         }
@@ -175,15 +170,12 @@ namespace SrtStudio {
 
             if (subtitles.Count <= 0) return;
 
-
-            if (refTrack != null) Tracks.Remove(refTrack);
             Track track = new Track {
                 Name = trackName,
                 Height = 50,
                 Locked = true
             };
             refTrack = track;
-            Tracks.Add(refTrack);
 
             timeline.AddTrack(track);
 
@@ -200,43 +192,8 @@ namespace SrtStudio {
         }
 
 
-        List<Track> Tracks { get; set; } = new List<Track>();
-
-
         private void SvHor_ScrollChanged(object sender, ScrollChangedEventArgs e) {
-            if (SuperList.Count < 1) return;
-            if (e.HorizontalChange == 0) return;
 
-            double val = timeline.svHor.HorizontalOffset / pixelscale * timescale;
-            TimeSpan horizonLeft = TimeSpan.FromSeconds(val);
-            val = (timeline.svHor.ViewportWidth + timeline.svHor.HorizontalOffset) / pixelscale * timescale;
-            TimeSpan horizonRight = TimeSpan.FromSeconds(val);
-
-            foreach (Track track in Tracks) {
-
-                foreach (Item item in track.Super) {
-                    if (item.Start <= horizonRight && item.End >= horizonLeft) {
-                        if (!track.Streamed.Contains(item)) {
-                            track.Streamed.Add(item);
-                            double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                            double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                            Chunk chunk = new Chunk {
-                                Margin = new Thickness(margin, 0, 0, 0),
-                                Width = width,
-                                Item = item
-                            };
-                            chunk.ContextMenu = contextMenu;
-                            chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
-                            item.Chunk = chunk;
-                            timeline.AddChunk(chunk, track);
-                        }
-                    }
-                    else {
-                        track.Streamed.Remove(item);
-                        timeline.RemoveChunk(item.Chunk, track);
-                    }
-                }
-            }
         }
 
         private void BakTimer_Tick(object sender, EventArgs e) {
@@ -258,8 +215,7 @@ namespace SrtStudio {
             timeline.OnNeedleMoved -= Timeline_OnNeedleMoved;
 
             if (except != timeline) {
-                double margin = position.TotalSeconds / timescale * pixelscale;
-                timeline.needle.Margin = new Thickness(margin, 0, 0, 0);
+                timeline.Position = position;
             }
 
             if (except != slider) {
@@ -308,7 +264,7 @@ namespace SrtStudio {
             if (SuperList.Count > 0 && listView.SelectedIndex != -1) {
                 index = listView.SelectedIndex + 1;
                 count = SuperList.Count;
-                perc = index / count * 100.0;
+                perc = (double)index / count * 100;
             }
 
             Title = currentFile + str + " - SrtStudio - " + index + "/" + count + " - " + perc.ToString("N1") + " %";
@@ -352,7 +308,7 @@ namespace SrtStudio {
 
         private MessageBoxResult UnsavedChangesDialog() {
             var result = MessageBox.Show(
-                "There are unsaved changes. \nDo you really want to quit?",
+                "There are unsaved changes. \nDo you really want to proceed?",
                 "Unsaved changes",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Exclamation
@@ -377,17 +333,14 @@ namespace SrtStudio {
                 //next item is 'neighbor' to current item
                 if (nextItem.Index == item.Index + 1) {
                     item.End = nextItem.End;
+                    item.Chunk.Update();
                     if (!asDialog)
                         item.Text += " " + nextItem.Text;
                     else
                         item.Text = "-" + item.Text + Environment.NewLine + "-" + nextItem.Text;
 
                     SuperList.Remove(nextItem);
-
-                    double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                    double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                    item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
-                    item.Chunk.Width = width;
+                    Project.Data.Subtitles.Remove(nextItem.Sub);
 
                     timeline.RemoveChunk(nextItem.Chunk, editTrack);
 
@@ -400,22 +353,11 @@ namespace SrtStudio {
 
 
         private void Timeline_OnNeedleMoved() {
-            double start = timeline.needle.Margin.Left / pixelscale * timescale;
-            Seek(TimeSpan.FromSeconds(start), timeline);
+
+            Seek(timeline.Position, timeline);
         }
 
-        private void EditTrack_OnChunkUpdated(Chunk chunk) {
-            Item item = (Item)chunk.DataContext;
-            Subtitle sub = item.Sub;
-
-            double start = chunk.Margin.Left / pixelscale * timescale;
-            item.Start = TimeSpan.FromSeconds(start);
-
-            double dur = chunk.Width / pixelscale * timescale;
-
-            double end = start + dur;
-            item.End = TimeSpan.FromSeconds(end);
-
+        private void Timeline_OnChunkUpdated(Chunk chunk) {
             unsavedChanges = true;
             UpdateTitle(_currentFile);
         }
@@ -448,6 +390,7 @@ namespace SrtStudio {
 
                 timeline.SelectedItems.Add(item);
             }
+            UpdateTitle(_currentFile);
         }
 
         private void listView_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
@@ -456,14 +399,10 @@ namespace SrtStudio {
                 //player.Position = item.Sub.Start;
                 Seek(item.Sub.Start);
 
-                double margin = timeline.needle.Margin.Left;
-
                 //timeline.svHor.ScrollChanged -= SvHor_ScrollChanged;
                 //timeline.svHor.ScrollToHorizontalOffset(margin);
                 //timeline.svHor.ScrollChanged += SvHor_ScrollChanged;
-                timeline.needle.BringIntoView(new Rect(new Size(50, 50)));
-
-
+                timeline.FocusNeedle();
             }
         }
 
@@ -500,7 +439,7 @@ namespace SrtStudio {
         private void TextBox_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e) {
             TextBox textBox = (TextBox)sender;
 
-            Task.Delay(20).ContinueWith(t => {
+            Task.Delay(50).ContinueWith(t => {
                 Dispatcher.Invoke(() => {
                     textBox.Focus();
                     textBox.CaretIndex = textBox.Text.Length;
@@ -674,16 +613,16 @@ namespace SrtStudio {
                     SuperList.Insert(beforeNeedle.Index, item);
                     editTrack.Streamed.Add(item);
                     RecalculateIndexes();
-                    double left = item.Start.TotalSeconds / 10.0 * 1000.0;
-                    double num = item.Dur.TotalSeconds / 10.0 * 1000.0;
-                    Chunk chunk = new Chunk() {
-                        Margin = new Thickness(left, 0.0, 0.0, 0.0),
-                        Width = num,
-                        Item = item
-                    };
-
+                    Chunk chunk = new Chunk(timeline, item);
+                    chunk.ContextMenu = contextMenu;
+                    chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
                     item.Chunk = chunk;
                     timeline.AddChunk(chunk, editTrack);
+                    timeline.SelectedItems.Add(item);
+                    listView.SelectedItems.Clear();
+
+                    listView.SelectedItems.Add(item);
+                    item.Selected = true;
                 }
             }
         }
@@ -719,20 +658,20 @@ namespace SrtStudio {
             ListViewItem listViewItem = (ListViewItem)sender;
             Item dataContext = (Item)listViewItem.DataContext;
             ContextMenu contextMenu = listViewItem.ContextMenu;
-            MenuItem menuItem1 = (MenuItem)contextMenu.Items[0];
-            MenuItem menuItem2 = (MenuItem)contextMenu.Items[1];
-            MenuItem menuItem3 = (MenuItem)contextMenu.Items[2];
-            menuItem1.IsEnabled = false;
-            menuItem2.IsEnabled = false;
-            menuItem3.IsEnabled = false;
+            MenuItem merge = (MenuItem)contextMenu.Items[0];
+            MenuItem mergeDialog = (MenuItem)contextMenu.Items[1];
+            MenuItem delete = (MenuItem)contextMenu.Items[2];
+            merge.IsEnabled = false;
+            mergeDialog.IsEnabled = false;
+            delete.IsEnabled = false;
             if (!listView.SelectedItems.Contains(dataContext))
                 return;
             int count = listView.SelectedItems.Count;
             if (count >= 1)
-                menuItem3.IsEnabled = true;
+                delete.IsEnabled = true;
             if (count >= 2) {
-                menuItem1.IsEnabled = true;
-                menuItem2.IsEnabled = true;
+                merge.IsEnabled = true;
+                mergeDialog.IsEnabled = true;
             }
         }
 
@@ -740,20 +679,20 @@ namespace SrtStudio {
             Chunk chunk = (Chunk)sender;
             Item dataContext = (Item)chunk.DataContext;
             ContextMenu contextMenu = chunk.ContextMenu;
-            MenuItem menuItem1 = (MenuItem)contextMenu.Items[0];
-            MenuItem menuItem2 = (MenuItem)contextMenu.Items[1];
-            MenuItem menuItem3 = (MenuItem)contextMenu.Items[2];
-            menuItem1.IsEnabled = false;
-            menuItem2.IsEnabled = false;
-            menuItem3.IsEnabled = false;
+            MenuItem merge = (MenuItem)contextMenu.Items[0];
+            MenuItem mergeDialog = (MenuItem)contextMenu.Items[1];
+            MenuItem delete = (MenuItem)contextMenu.Items[2];
+            merge.IsEnabled = false;
+            mergeDialog.IsEnabled = false;
+            delete.IsEnabled = false;
             if (!listView.SelectedItems.Contains(dataContext))
                 return;
             int count = listView.SelectedItems.Count;
             if (count >= 1)
-                menuItem3.IsEnabled = true;
+                delete.IsEnabled = true;
             if (count >= 2) {
-                menuItem1.IsEnabled = true;
-                menuItem2.IsEnabled = true;
+                merge.IsEnabled = true;
+                mergeDialog.IsEnabled = true;
             }
         }
         #endregion

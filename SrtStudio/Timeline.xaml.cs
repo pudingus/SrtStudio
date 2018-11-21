@@ -37,8 +37,6 @@ namespace SrtStudio
         Point point;
 
 
-
-
         DispatcherTimer timer = new DispatcherTimer();
         public ObservableCollection<Item> SelectedItems { get; } = new ObservableCollection<Item>();
         bool beforetime = true;
@@ -47,14 +45,11 @@ namespace SrtStudio
         Chunk draggedChunk;
         DraggingPoint draggingPoint;
 
-        public ObservableCollection<Item> SuperSource { get; set; }
-
         public enum DraggingPoint {
             Start,
             Middle,
             End
         }
-
 
         public Timeline() {
             InitializeComponent();
@@ -64,10 +59,35 @@ namespace SrtStudio
 
             timer.Interval = new TimeSpan(0, 0, 0, 0, 150);
             timer.Tick += Timer_Tick;
+
+            OnChunkUpdated += Timeline_OnChunkUpdated;
+        }
+
+        public readonly int timescale = 10;   //one page is 'scale' (30) seconds
+        public readonly int pixelscale = 1000;
+
+        private List<Track> _tracks = new List<Track>();
+        public IEnumerable<Track> Tracks {
+            get {
+                return _tracks.AsReadOnly();
+            }
         }
 
 
+        public TimeSpan Position {
+            get {
+                double start = needle.Margin.Left / pixelscale * timescale;
+                return TimeSpan.FromSeconds(start);
+            }
+            set {
+                double margin = value.TotalSeconds / timescale * pixelscale;
+                needle.Margin = new Thickness(margin, 0, 0, 0);
+            }
+        }
 
+        public void FocusNeedle() {
+            needle.BringIntoView(new Rect(new Size(50, 50)));
+        }
 
         private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
             if (e.OldItems != null) {
@@ -98,12 +118,16 @@ namespace SrtStudio
                 stack.Children.Insert(0, track.TrackLine);
                 stackMeta.Children.Insert(0, track.TrackMeta);
             }
+
+            _tracks.Add(track);
         }
 
 
         public void RemoveTrack(Track track) {
             stack.Children.Remove(track.TrackLine);
             stackMeta.Children.Remove(track.TrackMeta);
+
+            _tracks.Remove(track);
         }
 
         public void ClearTracks() {
@@ -116,6 +140,7 @@ namespace SrtStudio
             chunk.MouseMove += Chunk_MouseMove;
             chunk.MouseLeftButtonDown += Chunk_MouseLeftButtonDown;
             chunk.MouseLeftButtonUp += Chunk_MouseLeftButtonUp;
+            chunk.MouseRightButtonDown += Chunk_MouseRightButtonDown;
             chunk.MouseEnter += Chunk_MouseEnter;
             chunk.MouseLeave += Chunk_MouseLeave;
             chunk.PreviewMouseDoubleClick += Chunk_PreviewMouseDoubleClick;
@@ -138,6 +163,7 @@ namespace SrtStudio
             //TrackLine.itemsControl.Items.Add(chunk);
             //TrackLine.ChunksSuper.Add(chunk);
         }
+
 
         public void RemoveChunk(Chunk chunk, Track track) {
             track.TrackLine.Children.Remove(chunk);
@@ -188,9 +214,9 @@ namespace SrtStudio
         }
 
         private void TrackMeta_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            if (draggedMeta != null) {
-                draggedMeta.ParentTrack.TrackLine.Height = draggedMeta.ActualHeight;
-            }
+            //if (draggedMeta != null) {
+            //    draggedMeta.ParentTrack.TrackLine.Height = draggedMeta.ActualHeight;
+           // }
 
             draggedMeta = null;
             Mouse.Capture(null);
@@ -209,6 +235,8 @@ namespace SrtStudio
 
             if (trackMeta != null) {
                 trackMeta.Height -= deltay;
+                draggedMeta.ParentTrack.TrackLine.Height = draggedMeta.ActualHeight;
+
             }
 
             if (draggedChunk != null) {
@@ -251,6 +279,17 @@ namespace SrtStudio
             }
         }
 
+        private void Timeline_OnChunkUpdated(Chunk chunk) {
+            Item item = (Item)chunk.DataContext;
+
+            double start = chunk.Margin.Left / pixelscale * timescale;
+            item.Start = TimeSpan.FromSeconds(start);
+
+            double dur = chunk.Width / pixelscale * timescale;
+            double end = start + dur;
+            item.End = TimeSpan.FromSeconds(end);
+        }
+
 
         private void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             ScrollViewer sv = (ScrollViewer)sender;
@@ -266,12 +305,26 @@ namespace SrtStudio
             e.Handled = true;
         }
 
+        public ContextMenu ChunkContextMenu { get; set; }
+        public event ContextMenuEventHandler ChunkContextMenuOpening;
+
+        private void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+            ChunkContextMenuOpening?.Invoke(sender, e);
+        }
+
+
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             ScrollViewer sv = (ScrollViewer)sender;
             scrollbar.Maximum = sv.ScrollableWidth;
             scrollbar.ViewportSize = sv.ViewportWidth;
             scrollbar.Value = sv.HorizontalOffset;
+
+            scrollbar.SmallChange = 0.00003 * sv.ScrollableWidth;
+            scrollbar.LargeChange = 0.004 * sv.ScrollableWidth;
+
+
+            //scrollbar.
             ////scrollbar.SmallChange = 1000;
             ////scrollbar.LargeChange = 1000;
 
@@ -280,11 +333,42 @@ namespace SrtStudio
             //Console.WriteLine(e.HorizontalOffset);
             //Console.WriteLine(e.ExtentWidth);
             //Console.WriteLine(sv.ScrollableWidth);
+
+            //if (SuperList.Count < 1) return;
+            if (e.HorizontalChange == 0) return;
+
+            double val = svHor.HorizontalOffset / pixelscale * timescale;
+            TimeSpan horizonLeft = TimeSpan.FromSeconds(val);
+            val = (svHor.ViewportWidth + svHor.HorizontalOffset) / pixelscale * timescale;
+            TimeSpan horizonRight = TimeSpan.FromSeconds(val);
+
+            foreach (Track track in Tracks) {
+
+                foreach (Item item in track.Super) {
+                    if (item.Start <= horizonRight && item.End >= horizonLeft) {
+                        if (!track.Streamed.Contains(item)) {
+                            track.Streamed.Add(item);
+                            Chunk chunk = new Chunk(this, item) {
+                                ContextMenu = ChunkContextMenu
+                            };
+                            chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+                            item.Chunk = chunk;
+                            AddChunk(chunk, track);
+                        }
+                    }
+                    else {
+                        track.Streamed.Remove(item);
+                        RemoveChunk(item.Chunk, track);
+                    }
+                }
+            }
         }
+
+
 
         private void ScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
         {
-            //svHor.ScrollToHorizontalOffset(e.NewValue);
+            svHor.ScrollToHorizontalOffset(e.NewValue);
         }
 
         bool seekbarDown = false;
@@ -445,6 +529,19 @@ namespace SrtStudio
 
                 beforetime = true;
                 timer.Start();
+            }
+        }
+
+
+        private void Chunk_MouseRightButtonDown(object sender, MouseButtonEventArgs e) {
+            Chunk chunk = (Chunk)sender;
+            if (!chunk.Locked) {
+                if (!chunk.Item.Selected) {
+
+                    UnselectAll();
+                    //SelectedChunks.Clear();
+                    SelectedItems.Add(chunk.Item);
+                }
             }
         }
 

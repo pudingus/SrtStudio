@@ -31,27 +31,33 @@ namespace SrtStudio
 
         private int _index;
         public int Index {
-            get { return _index; }
+            get => _index;
             set {
-                _index = value;
-                RaisePropertyChanged("Index");
+                if (_index != value) {
+                    _index = value;
+                    RaisePropertyChanged("Index");
+                }
             }
         }
         public TimeSpan Start {
             get => Sub.Start;
             set {
-                Sub.Start = value;
-                RaisePropertyChanged("Start");
-                UpdateDur();
+                if (Sub.Start != value) {
+                    Sub.Start = value;
+                    RaisePropertyChanged("Start");
+                    UpdateDur();
+                }
             }
         }
 
         public TimeSpan End {
             get => Sub.End;
             set {
-                Sub.End = value;
-                RaisePropertyChanged("End");
-                UpdateDur();
+                if (Sub.End != value) {
+                    Sub.End = value;
+                    RaisePropertyChanged("End");
+                    UpdateDur();
+                }
             }
         }
 
@@ -83,36 +89,45 @@ namespace SrtStudio
         public string Text {
             get => Sub.Text;
             set {
-                Sub.Text = value;
-                RaisePropertyChanged("Text");
-                UpdateCps();
+                if (Sub.Text != value) {
+                    Sub.Text = value;
+                    RaisePropertyChanged("Text");
+                    UpdateCps();
+                }
             }
         }
 
         private bool _enabled;
         public bool Enabled {
-            get { return _enabled; }
+            get => _enabled;
             set {
-                _enabled = value;
-                RaisePropertyChanged("Enabled");
+                if (_enabled != value) {
+                    _enabled = value;
+                    RaisePropertyChanged("Enabled");
+                }
             }
         }
 
         private Thickness _borderThickness;
         public Thickness BorderThickness {
-            get { return _borderThickness; }
+            get => _borderThickness;
             set {
-                _borderThickness = value;
-                RaisePropertyChanged("BorderThickness");
+                if (_borderThickness != value) {
+                    _borderThickness = value;
+                    RaisePropertyChanged("BorderThickness");
+                }
             }
         }
 
         private bool _selected;
         public bool Selected {
-            get { return _selected; }
+            get => _selected;
             set {
-                _selected = value;
-                RaisePropertyChanged("Selected");
+                if (_selected != value) {
+
+                    _selected = value;
+                    RaisePropertyChanged("Selected");
+                }
             }
         }
 
