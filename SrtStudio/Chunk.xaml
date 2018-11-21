@@ -14,8 +14,8 @@
         <Border x:Name="selBorder" Background="#35FFFFFF" d:IsHidden="True"/>
         <Border BorderBrush="Black" BorderThickness="1"/>
 
-        <!--<TextBlock Foreground="White" Margin="10,10,5,2" TextWrapping="WrapWithOverflow" Text="{Binding Text, FallbackValue='- Snídaně za pět, zlato.'}" VerticalAlignment="Top"/>-->
-        <TextBox Background="#00000000" BorderThickness="0" IsReadOnly="True" ToolTip="{Binding Text}" Foreground="White" Margin="10,10,5,2" TextWrapping="WrapWithOverflow" Text="{Binding Text, FallbackValue='- Snídaně za pět, zlato.'}" VerticalAlignment="Top"/>
+        <TextBlock Foreground="White" Margin="7,5,5,2" TextWrapping="WrapWithOverflow" ToolTip="{Binding Text}" Text="{Binding Text, FallbackValue='- Snídaně za pět, zlato.'}" VerticalAlignment="Top"/>
+        <!--<TextBox Background="#00000000" BorderThickness="0" IsReadOnly="True" ToolTip="{Binding Text}" Foreground="White" Margin="10,10,5,2" TextWrapping="WrapWithOverflow" Text="{Binding Text, FallbackValue='- Snídaně za pět, zlato.'}" VerticalAlignment="Top"/>-->
         <TextBlock x:Name="textBlock_dur" Foreground="White" Margin="0,0,10,23" TextWrapping="NoWrap" Text="{Binding Dur, StringFormat='{}{0:s\\,ff} s', FallbackValue='1,42 s'}" Height="16" VerticalAlignment="Bottom" TextAlignment="Right" HorizontalAlignment="Right" Width="42"/>
         <TextBlock x:Name="textBlock_cps" Foreground="White" Margin="0,0,10,7" TextWrapping="NoWrap" Text="{Binding CPS, StringFormat={}{0:N1} CPS, FallbackValue='12,43 CPS'}" Height="16" VerticalAlignment="Bottom" TextAlignment="Right" HorizontalAlignment="Right" Width="61"/>
 

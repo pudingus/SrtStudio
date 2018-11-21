@@ -17,6 +17,10 @@ namespace SrtStudio
     {
         public bool Locked { get; set; }
 
+        public List<Item> Streamed;
+        public ObservableCollection<Item> Super;
+
+
 
         public string Name {
             get => TrackMeta.trackName.Text;

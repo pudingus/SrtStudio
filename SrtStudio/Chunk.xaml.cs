@@ -21,13 +21,27 @@ namespace SrtStudio
     public partial class Chunk : UserControl
     {
         public bool Locked { get; set; }
-        private bool _selected;
-        public bool Selected {
-            get { return _selected; }
+        //private bool _selected;
+        //public bool Selected {
+        //    get { return _selected; }
+        //    set {
+        //        _selected = value;
+        //        if (_selected) selBorder.Visibility = Visibility.Visible;
+        //        else selBorder.Visibility = Visibility.Hidden;
+        //    }
+        //}
+
+        private Item _item;
+        public Item Item {
+            get {
+                return _item;
+            }
             set {
-                _selected = value;
-                if (_selected) selBorder.Visibility = Visibility.Visible;
-                else selBorder.Visibility = Visibility.Hidden;
+                if (value != null &&_item != value) {
+                    _item = value;
+                    _item.PropertyChanged += Item_PropertyChanged;
+                    DataContext = Item;
+                }
             }
         }
 
@@ -36,14 +50,14 @@ namespace SrtStudio
             InitializeComponent();
             selBorder.Visibility = Visibility.Hidden;
             hilitBorder.Visibility = Visibility.Hidden;
-
-            //Item item = (Item)DataContext;
-            //item.PropertyChanged += Item_PropertyChanged;
         }
 
-        //private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-
-        //}
+        private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            if (e.PropertyName == "Selected") {
+                if (Item.Selected) selBorder.Visibility = Visibility.Visible;
+                else selBorder.Visibility = Visibility.Hidden;
+            }
+        }
 
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
         {

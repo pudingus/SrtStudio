@@ -40,7 +40,7 @@ namespace SrtStudio
 
 
         DispatcherTimer timer = new DispatcherTimer();
-        public ObservableCollection<Chunk> SelectedChunks { get; } = new ObservableCollection<Chunk>();
+        public ObservableCollection<Item> SelectedItems { get; } = new ObservableCollection<Item>();
         bool beforetime = true;
         double startdeltax;
         bool afterPoint = false;
@@ -59,13 +59,29 @@ namespace SrtStudio
         public Timeline() {
             InitializeComponent();
 
-            //SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+            SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
 
 
             timer.Interval = new TimeSpan(0, 0, 0, 0, 150);
             timer.Tick += Timer_Tick;
         }
 
+
+
+
+        private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
+            if (e.OldItems != null) {
+                foreach (Item item in e.OldItems) {
+                    item.Selected = false;
+                }
+            }
+
+            if (e.NewItems != null) {
+                foreach (Item item in e.NewItems) {
+                    item.Selected = true;
+                }
+            }
+        }
 
         public void AddTrack(Track track, bool toBottom = false) {
             track.TrackMeta.MouseMove += TrackMeta_MouseMove;
@@ -128,13 +144,9 @@ namespace SrtStudio
         }
 
         public void UnselectAll() {
-            var copy = new ObservableCollection<Chunk>();
-            foreach (Chunk chunk in SelectedChunks) {
-                copy.Add(chunk);
-            }
-
-            foreach (Chunk chunk in copy) {
-                SelectedChunks.Remove(chunk);
+            var copy = new ObservableCollection<Item>(SelectedItems);
+            foreach (Item item in copy) {
+                SelectedItems.Remove(item);
             }
         }
 
@@ -201,12 +213,11 @@ namespace SrtStudio
 
             if (draggedChunk != null) {
                 startdeltax = point.X - startPoint.X;
-                if (startdeltax >= 5.0 || startdeltax <= -5.0) {
+                if (startdeltax >= 4.0 || startdeltax <= -4.0) {
                     Debug.WriteLine("after point " + DateTime.Now);
                     if (afterPoint == false) {
                         afterPoint = true;
-                        //deltax -= startdeltax;
-
+                        deltax -= startdeltax;
                     }
                 }
 
@@ -229,11 +240,11 @@ namespace SrtStudio
 
                     }
                     else if (draggingPoint == DraggingPoint.Middle) {
-                        foreach (Chunk chunkk in SelectedChunks) {
-                            double mleft = chunkk.Margin.Left;
+                        foreach (Item item in SelectedItems) {
+                            double mleft = item.Chunk.Margin.Left;
                             mleft -= deltax;
-                            chunkk.Margin = new Thickness(mleft, 0, 0, 0);
-                            OnChunkUpdated?.Invoke(chunkk);
+                            item.Chunk.Margin = new Thickness(mleft, 0, 0, 0);
+                            OnChunkUpdated?.Invoke(item.Chunk);
                         }
                     }
                 }
@@ -259,16 +270,16 @@ namespace SrtStudio
         {
             ScrollViewer sv = (ScrollViewer)sender;
             scrollbar.Maximum = sv.ScrollableWidth;
-            scrollbar.ViewportSize = e.ViewportWidth;
-            scrollbar.Value = e.HorizontalOffset;
-            //scrollbar.SmallChange = 1000;
-            //scrollbar.LargeChange = 1000;
+            scrollbar.ViewportSize = sv.ViewportWidth;
+            scrollbar.Value = sv.HorizontalOffset;
+            ////scrollbar.SmallChange = 1000;
+            ////scrollbar.LargeChange = 1000;
 
-            Console.WriteLine("scroll changed");
-            Console.WriteLine(e.ViewportWidth);
-            Console.WriteLine(e.HorizontalOffset);
-            Console.WriteLine(e.ExtentWidth);
-            Console.WriteLine(sv.ScrollableWidth);
+            //Console.WriteLine("scroll changed");
+            //Console.WriteLine(e.ViewportWidth);
+            //Console.WriteLine(e.HorizontalOffset);
+            //Console.WriteLine(e.ExtentWidth);
+            //Console.WriteLine(sv.ScrollableWidth);
         }
 
         private void ScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
@@ -351,20 +362,6 @@ namespace SrtStudio
         }
 
 
-        //private void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
-        //    if (e.OldItems != null) {
-        //        foreach (Chunk chunk in e.OldItems) {
-        //            chunk.Selected = false;
-        //        }
-        //    }
-
-        //    if (e.NewItems != null) {
-        //        foreach (Chunk chunk in e.NewItems) {
-        //            chunk.Selected = true;
-        //        }
-        //    }
-        //}
-
         private void Chunk_MouseMove(object sender, MouseEventArgs e) {
             Chunk chunk = (Chunk)sender;
             if (!chunk.Locked) {
@@ -430,19 +427,19 @@ namespace SrtStudio
                 }
 
                 if (Keyboard.Modifiers == ModifierKeys.Control) {
-                    if (!chunk.Selected) {
-                        SelectedChunks.Add(chunk);
+                    if (!chunk.Item.Selected) {
+                        SelectedItems.Add(chunk.Item);
                     }
                     else {
-                        SelectedChunks.Remove(chunk);
+                        SelectedItems.Remove(chunk.Item);
                     }
                 }
                 else {
-                    if (!chunk.Selected) {
+                    if (!chunk.Item.Selected) {
 
                         UnselectAll();
                         //SelectedChunks.Clear();
-                        SelectedChunks.Add(chunk);
+                        SelectedItems.Add(chunk.Item);
                     }
                 }
 
@@ -464,7 +461,7 @@ namespace SrtStudio
                     if (Keyboard.Modifiers != ModifierKeys.Control) {
                         UnselectAll();
                         //SelectedChunks.Clear();
-                        SelectedChunks.Add(chunk);
+                        SelectedItems.Add(chunk.Item);
                     }
                 }
             }

@@ -37,6 +37,8 @@ namespace SrtStudio {
         private MpvPlayer player;
 
         public ObservableCollection<Item> SuperList { get; set; } = new ObservableCollection<Item>();
+        public ObservableCollection<Item> SuperListRef { get; set; } = new ObservableCollection<Item>();
+
 
         Track editTrack;
         Track refTrack;
@@ -117,7 +119,7 @@ namespace SrtStudio {
             airControl.Front = topGrid;
             contextMenu = (ContextMenu)FindResource("ItemContextMenu");
 
-            timeline.SelectedChunks.CollectionChanged += SelectedChunks_CollectionChanged;
+            timeline.SelectedItems.CollectionChanged += SelectedChunks_CollectionChanged;
             timeline.OnChunkUpdated += EditTrack_OnChunkUpdated;
 
             bakTimer.Tick += BakTimer_Tick;
@@ -138,10 +140,12 @@ namespace SrtStudio {
 
             if (subtitles.Count <= 0) return;
 
+            if (editTrack != null) Tracks.Remove(editTrack);
             Track track = new Track {
                 Name = trackName
             };
             editTrack = track;
+            Tracks.Add(editTrack);
 
             timeline.AddTrack(track, true);
             foreach (Subtitle sub in subtitles) {
@@ -151,26 +155,10 @@ namespace SrtStudio {
                     Index = i
                 };
                 SuperList.Add(item);
-
-                //double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                //double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                //Chunk chunk = new Chunk {
-                //    Margin = new Thickness(margin, 0, 0, 0),
-                //    Width = width,
-                //    DataContext = item
-                //};
-                //chunk.ContextMenu = contextMenu;
-                //chunk.ContextMenuOpening += new ContextMenuEventHandler(Chunk_ContextMenuOpening);
-
-                //item.Chunk = chunk;
-
-                //timeline.AddChunk(chunk, track);
             }
 
-            OutRight = new List<Item>(SuperList);
-            OutLeft = new List<Item>();
-            Streamed = new List<Item>();
-
+            track.Super = SuperList;
+            track.Streamed = new List<Item>();
 
 
             Item lastItem = SuperList[SuperList.Count-1];
@@ -178,112 +166,76 @@ namespace SrtStudio {
             double width = lastItem.Dur.TotalSeconds / timescale * pixelscale;
 
             timeline.seekbar.MinWidth = margin + width;
-            //Chunk chunk = new Chunk {
-            //    Margin = new Thickness(margin, 0, 0, 0),
-            //    Width = width,
-            //    DataContext = lastItem
-            //};
-            //chunk.ContextMenu = contextMenu;
-            //chunk.ContextMenuOpening += new ContextMenuEventHandler(Chunk_ContextMenuOpening);
-            //timeline.AddChunk(chunk, track);
-
-
-            //OutRight.Remove(lastItem);
-            //Streamed.Add(lastItem);
         }
 
-        List<Item> OutRight;
-        List<Item> OutLeft;
-        List<Item> Streamed;
+        private void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
+            if (refTrack != null)
+                timeline.RemoveTrack(refTrack);
+            int i = 0;
+
+            if (subtitles.Count <= 0) return;
+
+
+            if (refTrack != null) Tracks.Remove(refTrack);
+            Track track = new Track {
+                Name = trackName,
+                Height = 50,
+                Locked = true
+            };
+            refTrack = track;
+            Tracks.Add(refTrack);
+
+            timeline.AddTrack(track);
+
+            foreach (Subtitle sub in subtitles) {
+                i++;
+                Item item = new Item(sub) {
+                    Index = i
+                };
+                SuperListRef.Add(item);
+            }
+
+            track.Super = SuperListRef;
+            track.Streamed = new List<Item>();
+        }
+
+
+        List<Track> Tracks { get; set; } = new List<Track>();
 
 
         private void SvHor_ScrollChanged(object sender, ScrollChangedEventArgs e) {
             if (SuperList.Count < 1) return;
-            Console.WriteLine("give me everything you got");
-
+            if (e.HorizontalChange == 0) return;
 
             double val = timeline.svHor.HorizontalOffset / pixelscale * timescale;
             TimeSpan horizonLeft = TimeSpan.FromSeconds(val);
             val = (timeline.svHor.ViewportWidth + timeline.svHor.HorizontalOffset) / pixelscale * timescale;
             TimeSpan horizonRight = TimeSpan.FromSeconds(val);
 
-            var copy = new List<Item>(OutRight);
+            foreach (Track track in Tracks) {
 
-            foreach (Item item in copy) {
-                if (item.Start > horizonRight) break;
-
-                OutRight.Remove(item);
-                Streamed.Add(item);
-
-                double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                Chunk chunk = new Chunk {
-                    Margin = new Thickness(margin, 0, 0, 0),
-                    Width = width,
-                    DataContext = item
-                };
-                item.Chunk = chunk;
-                timeline.AddChunk(chunk, editTrack);
-            }
-
-
-
-            copy = new List<Item>(Streamed);
-            foreach (Item item in copy) {
-                if (item.End > horizonLeft) break; //pokud je položka ve vzestupné kolekci nad horizontem, další musí být taky, takže pryč odsud
-                OutLeft.Insert(0, item);
-                Streamed.Remove(item);
-                timeline.RemoveChunk(item.Chunk, editTrack);
-            }
-
-            for (int i = copy.Count - 1; i >= 0; i--) {
-                Item item = copy[i];
-                if (item.Start < horizonRight) break;
-                OutRight.Insert(0, item);
-                Streamed.Remove(item);
-                timeline.RemoveChunk(item.Chunk, editTrack);
-            }
-
-            copy = new List<Item>(OutLeft);
-            foreach (Item item in copy) {
-                if (item.End < horizonLeft) break;
-                OutLeft.Remove(item);
-                Streamed.Insert(0, item);
-
-                double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                Chunk chunk = new Chunk {
-                    Margin = new Thickness(margin, 0, 0, 0),
-                    Width = width,
-                    DataContext = item
-                };
-                item.Chunk = chunk;
-                timeline.AddChunk(chunk, editTrack);
-            }
-        }
-
-        private void Button_Click_1(object sender, RoutedEventArgs e) {
-            Console.WriteLine("give me everything you got");
-
-            double horizonD = (timeline.svHor.ViewportWidth + timeline.svHor.HorizontalOffset) / pixelscale * timescale;
-            TimeSpan horizon = TimeSpan.FromSeconds(horizonD);
-
-            var copy = new List<Item>(OutRight);
-
-
-            foreach (Item item in copy) {
-                if (item.Start > horizon) break;
-
-                OutRight.Remove(item);
-
-                double margin = item.Start.TotalSeconds / timescale * pixelscale;
-                double width = item.Dur.TotalSeconds / timescale * pixelscale;
-                Chunk chunk = new Chunk {
-                    Margin = new Thickness(margin, 0, 0, 0),
-                    Width = width,
-                    DataContext = item
-                };
-                timeline.AddChunk(chunk, editTrack);
+                foreach (Item item in track.Super) {
+                    if (item.Start <= horizonRight && item.End >= horizonLeft) {
+                        if (!track.Streamed.Contains(item)) {
+                            track.Streamed.Add(item);
+                            double margin = item.Start.TotalSeconds / timescale * pixelscale;
+                            double width = item.Dur.TotalSeconds / timescale * pixelscale;
+                            Chunk chunk = new Chunk {
+                                Margin = new Thickness(margin, 0, 0, 0),
+                                Width = width,
+                                Item = item
+                            };
+                            chunk.ContextMenu = contextMenu;
+                            chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+                            item.Chunk = chunk;
+                            timeline.AddChunk(chunk, track);
+                        }
+                    }
+                    else {
+                        track.Streamed.Remove(item);
+                        timeline.RemoveChunk(item.Chunk, track);
+                    }
+                }
             }
         }
 
@@ -345,40 +297,6 @@ namespace SrtStudio {
             timeline.OnNeedleMoved += Timeline_OnNeedleMoved;
         }
 
-
-        private void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
-            if (refTrack != null)
-                timeline.RemoveTrack(refTrack);
-            int i = 0;
-
-            if (subtitles.Count <= 0) return;
-
-            Track track = new Track {
-                Name = trackName,
-                Height = 50,
-                Locked = true
-            };
-            refTrack = track;
-
-            timeline.AddTrack(track);
-
-            //foreach (Subtitle sub in subtitles) {
-            //    i++;
-            //    TimeSpan duration = sub.End - sub.Start;
-
-            //    double margin = sub.Start.TotalSeconds / timescale * pixelscale;
-            //    double width = duration.TotalSeconds / timescale * pixelscale;
-            //    Item item = new Item(sub);
-            //    Chunk chunk = new Chunk {
-            //        Margin = new Thickness(margin, 0, 0, 0),
-            //        Width = width,
-            //        DataContext = item
-            //    };
-
-            //    timeline.AddChunk(chunk, track);
-            //}
-        }
-
         private void UpdateTitle(string currentFile) {
             _currentFile = currentFile;
             string str = "";
@@ -417,6 +335,9 @@ namespace SrtStudio {
             UpdateTitle(Path.GetFileName(filename));
             if (!string.IsNullOrEmpty(Project.Data.VideoPath))
                 player.Load(Project.Data.VideoPath);
+
+
+            Project.Data.Subtitles = Project.Data.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
 
             LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
             LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
@@ -506,13 +427,10 @@ namespace SrtStudio {
                 item.Enabled = false;
             }
             listView.SelectedItems.Clear();
-            foreach (Chunk chunk in timeline.SelectedChunks) {
-                if (chunk != null) {
-                    Item item = (Item)chunk.DataContext;
-                    listView.SelectedItems.Add(item);
-                    item.Enabled = true;
-                    listView.ScrollIntoView(item);
-                }
+            foreach (Item item in timeline.SelectedItems) {
+                listView.SelectedItems.Add(item);
+                item.Enabled = true;
+                listView.ScrollIntoView(item);
             }
             listView.SelectionChanged += listView_SelectionChanged;
         }
@@ -520,14 +438,15 @@ namespace SrtStudio {
         private void listView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             foreach (Item item in e.RemovedItems) {
                 item.Enabled = false;
-                timeline.SelectedChunks.Remove(item.Chunk);
+                item.Selected = false;
+                timeline.SelectedItems.Remove(item);
             }
 
             foreach (Item item in e.AddedItems) {
                 item.Enabled = true;
-                timeline.SelectedChunks.Add(item.Chunk);
+                item.Selected = true;
 
-                item.Chunk.BringIntoView();
+                timeline.SelectedItems.Add(item);
             }
         }
 
@@ -536,6 +455,15 @@ namespace SrtStudio {
             if (((FrameworkElement)e.OriginalSource).DataContext is Item item && player.IsMediaLoaded) {
                 //player.Position = item.Sub.Start;
                 Seek(item.Sub.Start);
+
+                double margin = timeline.needle.Margin.Left;
+
+                //timeline.svHor.ScrollChanged -= SvHor_ScrollChanged;
+                //timeline.svHor.ScrollToHorizontalOffset(margin);
+                //timeline.svHor.ScrollChanged += SvHor_ScrollChanged;
+                timeline.needle.BringIntoView(new Rect(new Size(50, 50)));
+
+
             }
         }
 
@@ -742,18 +670,20 @@ namespace SrtStudio {
                         Text = ""
                     };
                     Project.Data.Subtitles.Insert(beforeNeedle.Index, sub);
-                    Item obj2 = new Item(sub);
-                    SuperList.Insert(beforeNeedle.Index, obj2);
+                    Item item = new Item(sub);
+                    SuperList.Insert(beforeNeedle.Index, item);
+                    editTrack.Streamed.Add(item);
                     RecalculateIndexes();
-                    double left = obj2.Start.TotalSeconds / 10.0 * 1000.0;
-                    double num = obj2.Dur.TotalSeconds / 10.0 * 1000.0;
-                    Chunk chunk1 = new Chunk();
-                    chunk1.Margin = new Thickness(left, 0.0, 0.0, 0.0);
-                    chunk1.Width = num;
-                    Chunk chunk2 = chunk1;
-                    chunk2.DataContext = (object)obj2;
-                    obj2.Chunk = chunk2;
-                    timeline.AddChunk(chunk2, editTrack);
+                    double left = item.Start.TotalSeconds / 10.0 * 1000.0;
+                    double num = item.Dur.TotalSeconds / 10.0 * 1000.0;
+                    Chunk chunk = new Chunk() {
+                        Margin = new Thickness(left, 0.0, 0.0, 0.0),
+                        Width = num,
+                        Item = item
+                    };
+
+                    item.Chunk = chunk;
+                    timeline.AddChunk(chunk, editTrack);
                 }
             }
         }
@@ -778,7 +708,9 @@ namespace SrtStudio {
 
             foreach (Item item in copy) {
                 SuperList.Remove(item);
+                Project.Data.Subtitles.Remove(item.Sub);
                 timeline.RemoveChunk(item.Chunk, editTrack);
+                editTrack.Super.Remove(item);
             }
             RecalculateIndexes();
         }
