@@ -594,39 +594,62 @@ namespace SrtStudio {
                 else player.Resume();
             }
             if (e.Key == Key.F2) {
+                InsertNewSubtitle();
+            }
+            if (e.Key == Key.F8) {
+                TrimEnd(underNeedle);
+            }
+        }
 
-                Item beforeNeedle = null;
-                for (int index = SuperList.Count - 1; index >= 0; --index) {
-                    if (player.Position >= SuperList[index].Start) {
-                        beforeNeedle = SuperList[index];
-                        break;
-                    }
+        private void TrimEnd(Item item) {
+            if (item != null) {
+                TimeSpan dur, pos, start;
+                pos = timeline.Position;
+                start = item.Start;
+                dur = pos - start;
+                if (dur < TimeSpan.FromSeconds(1.5)) {
+                    MessageBox.Show("no");
                 }
-                if (beforeNeedle != null) {
-                    Subtitle sub = new Subtitle() {
-                        Start = player.Position,
-                        End = player.Position + TimeSpan.FromSeconds(1.5),
-                        Text = ""
-                    };
-                    Project.Data.Subtitles.Insert(beforeNeedle.Index, sub);
-                    Item item = new Item(sub);
-                    SuperList.Insert(beforeNeedle.Index, item);
-                    editTrack.Streamed.Add(item);
-                    RecalculateIndexes();
-                    Chunk chunk = new Chunk(timeline, item);
-                    chunk.ContextMenu = contextMenu;
-                    chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
-                    item.Chunk = chunk;
-                    timeline.AddChunk(chunk, editTrack);
-                    timeline.SelectedItems.Add(item);
-                    listView.SelectedItems.Clear();
-
-                    listView.SelectedItems.Add(item);
-                    item.Selected = true;
+                else {
+                    item.End = timeline.Position;
+                    item.Chunk.Update();
                 }
             }
         }
+
+        private void InsertNewSubtitle() {
+            Item beforeNeedle = null;
+            for (int index = SuperList.Count - 1; index >= 0; --index) {
+                if (player.Position >= SuperList[index].Start) {
+                    beforeNeedle = SuperList[index];
+                    break;
+                }
+            }
+            if (beforeNeedle != null) {
+                Subtitle sub = new Subtitle() {
+                    Start = player.Position,
+                    End = player.Position + TimeSpan.FromSeconds(1.5),
+                    Text = ""
+                };
+                Project.Data.Subtitles.Insert(beforeNeedle.Index, sub);
+                Item item = new Item(sub);
+                SuperList.Insert(beforeNeedle.Index, item);
+                editTrack.Streamed.Add(item);
+                RecalculateIndexes();
+                Chunk chunk = new Chunk(timeline, item);
+                chunk.ContextMenu = contextMenu;
+                chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+                item.Chunk = chunk;
+                timeline.AddChunk(chunk, editTrack);
+                timeline.SelectedItems.Add(item);
+                listView.SelectedItems.Clear();
+
+                listView.SelectedItems.Add(item);
+                item.Selected = true;
+            }
+        }
         #endregion
+
 
         #region Context Menu Events
         private void MenuItemMerge_Click(object sender, RoutedEventArgs e) {
