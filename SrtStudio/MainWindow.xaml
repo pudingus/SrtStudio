@@ -93,6 +93,7 @@
                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
                                                                 SelectionChanged="TextBox_SelectionChanged"
                                                                 HorizontalAlignment="Stretch"
+                                                                SpellCheck.IsEnabled="True"
                                                             />
 
                                                         </DataTemplate>
@@ -131,7 +132,7 @@
                                     </WindowsFormsHost>
 
                                     <Slider x:Name="slider" ValueChanged="Slider_ValueChanged" Maximum="100" IsMoveToPointEnabled="True" Height="20" VerticalAlignment="Bottom" Margin="38,0,5,4"/>
-                                    <Button x:Name="playButton" Content="►" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
+                                    <Button x:Name="playButton" Content="►" Foreground="White" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
 
                                     <Grid x:Name="topGrid">
                                         <TextBox BorderThickness="0" Background="#00000000" x:Name="subDisplay" FontSize="18" Foreground="Yellow" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="10,10,10,55" FontFamily="Arial">

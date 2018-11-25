@@ -21,7 +21,6 @@ namespace SrtStudio
         public ObservableCollection<Item> Super;
 
 
-
         public string Name {
             get => TrackMeta.trackName.Text;
             set => TrackMeta.trackName.Text = value;

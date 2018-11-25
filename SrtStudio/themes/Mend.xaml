@@ -899,6 +899,19 @@
 
     <!--Blend button-->
 
+    <Style x:Key="ButtonFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="2" SnapsToDevicePixels="true"
+						Stroke="{StaticResource ForegroundBrush}"
+						StrokeThickness="1"
+						StrokeDashArray="1 2"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 
     <SolidColorBrush x:Key="ButtonNormalBackground" Color="{StaticResource DarkBackgroundColor}"/>
     <SolidColorBrush x:Key="ButtonNormalBorder" Color="#4C4C4C"/>

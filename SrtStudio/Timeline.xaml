@@ -25,7 +25,7 @@
                 <StackPanel Grid.Column="0" x:Name="stackMeta" Margin="0,20,0,0">
                 </StackPanel>
 
-                <ScrollViewer Grid.Column="1" x:Name="svHor" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,18" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
+                <ScrollViewer Grid.Column="1" x:Name="svHor" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,18" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
                     <Grid>
                         <Rectangle x:Name="seekbar" Height="20" Cursor="ScrollWE" VerticalAlignment="Top" HorizontalAlignment="Stretch" MouseLeftButtonDown="seekbar_MouseLeftButtonDown" MouseLeftButtonUp="seekbar_MouseLeftButtonUp" MouseMove="seekbar_MouseMove">
                             <Rectangle.Fill>
