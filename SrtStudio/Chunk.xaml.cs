@@ -56,20 +56,21 @@ namespace SrtStudio
         }
 
         private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-            if (e.PropertyName == "Selected") {
-                if (Item.Selected) selBorder.Visibility = Visibility.Visible;
+            Item item = (Item)sender;
+            if (e.PropertyName == nameof(item.Selected)) {
+                if (item.Selected) selBorder.Visibility = Visibility.Visible;
                 else selBorder.Visibility = Visibility.Hidden;
             }
-            //else if (e.PropertyName == "Start") {
-            //    double margin = Item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
+            //else if (e.PropertyName == nameof(item.Start)) {
+            //    double margin = item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
             //    Margin = new Thickness(margin, 0, 0, 0);
-            //    double width = Item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
+            //    double width = item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
             //    Width = width;
             //}
-            //else if (e.PropertyName == "Dur") {
-            //    double margin = Item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
+            //else if (e.PropertyName == nameof(item.Dur)) {
+            //    double margin = item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
             //    Margin = new Thickness(margin, 0, 0, 0);
-            //    double width = Item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
+            //    double width = item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
             //    Width = width;
             //}
         }
@@ -91,7 +92,6 @@ namespace SrtStudio
             else {
                 textBlock_dur.Visibility = Visibility.Visible;
                 textBlock_cps.Visibility = Visibility.Visible;
-
             }
         }
     }

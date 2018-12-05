@@ -26,7 +26,7 @@ namespace SrtStudio
         public static string FileName { get; private set; }
         public static ProjectStorage Data { get; set; } = new ProjectStorage();
 
-        public static void Read(string filename, bool asBackup = false) {
+        public static void Load(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
 
             using (FileStream stream = File.OpenRead(asBackup ? filename+".bak" : filename)) {
@@ -37,7 +37,7 @@ namespace SrtStudio
             }
         }
 
-        public static void Write(string filename, bool asBackup = false) {
+        public static void Save(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
 
             using (FileStream stream = File.Create(asBackup ? filename+".bak" : filename)) {

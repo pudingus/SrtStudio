@@ -35,7 +35,7 @@ namespace SrtStudio
             set {
                 if (_index != value) {
                     _index = value;
-                    RaisePropertyChanged("Index");
+                    RaisePropertyChanged(nameof(Index));
                 }
             }
         }
@@ -44,7 +44,7 @@ namespace SrtStudio
             set {
                 if (Sub.Start != value) {
                     Sub.Start = value;
-                    RaisePropertyChanged("Start");
+                    RaisePropertyChanged(nameof(Start));
                     UpdateDur();
                 }
             }
@@ -55,7 +55,7 @@ namespace SrtStudio
             set {
                 if (Sub.End != value) {
                     Sub.End = value;
-                    RaisePropertyChanged("End");
+                    RaisePropertyChanged(nameof(End));
                     UpdateDur();
                 }
             }
@@ -69,7 +69,7 @@ namespace SrtStudio
             TimeSpan dur = End - Start;
             if (dur !=_dur) {
                 _dur = dur;
-                RaisePropertyChanged("Dur");
+                RaisePropertyChanged(nameof(Dur));
                 UpdateCps();
             }
         }
@@ -81,7 +81,7 @@ namespace SrtStudio
         private void UpdateCps() {
             if (Text != null) {
                 _cps = Text.Length / _dur.TotalSeconds;
-                RaisePropertyChanged("CPS");
+                RaisePropertyChanged(nameof(CPS));
             }
         }
 
@@ -91,7 +91,7 @@ namespace SrtStudio
             set {
                 if (Sub.Text != value) {
                     Sub.Text = value;
-                    RaisePropertyChanged("Text");
+                    RaisePropertyChanged(nameof(Text));
                     UpdateCps();
                 }
             }
@@ -103,7 +103,7 @@ namespace SrtStudio
             set {
                 if (_enabled != value) {
                     _enabled = value;
-                    RaisePropertyChanged("Enabled");
+                    RaisePropertyChanged(nameof(Enabled));
                 }
             }
         }
@@ -114,7 +114,7 @@ namespace SrtStudio
             set {
                 if (_borderThickness != value) {
                     _borderThickness = value;
-                    RaisePropertyChanged("BorderThickness");
+                    RaisePropertyChanged(nameof(BorderThickness));
                 }
             }
         }
@@ -126,7 +126,7 @@ namespace SrtStudio
                 if (_selected != value) {
 
                     _selected = value;
-                    RaisePropertyChanged("Selected");
+                    RaisePropertyChanged(nameof(Selected));
                 }
             }
         }
