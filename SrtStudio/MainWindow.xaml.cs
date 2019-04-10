@@ -63,6 +63,8 @@ namespace SrtStudio {
             Interval = TimeSpan.FromMinutes(1.0)
         };
 
+        private TextBox curTextBox;
+
         public MainWindow() {
             DataContext = this;
             InitializeComponent();
@@ -393,17 +395,29 @@ namespace SrtStudio {
             Debug.WriteLine("textbox preview keydown");
             TextBox textBox = (TextBox)sender;
             if (e.Key == Key.F4) {
-                int caretIndex = textBox.CaretIndex;
-                string str = RemoveNewlines(textBox.Text);
-                str = str.Insert(caretIndex, Environment.NewLine);
-                str = TrimSpaces(str);
-                textBox.Text = str;
-                textBox.CaretIndex = caretIndex + 1;
+                Action_MoveLineEnd();
                 e.Handled = true;
+            }
+
+            if (e.Key == Key.I && (Keyboard.Modifiers == ModifierKeys.Control)) {
+
+                int start = curTextBox.SelectionStart;
+                int length = curTextBox.SelectionLength;
+
+                string newText = curTextBox.Text.Insert(start, "<i>");
+                newText = newText.Insert(start + length + 3, "</i>");
+
+                curTextBox.Text = newText;
+                curTextBox.SelectionStart = start;
+                curTextBox.SelectionLength = length + 7;
+
+                Debug.WriteLine("its italic time");
             }
         }
 
         private void TextBox_SelectionChanged(object sender, RoutedEventArgs e) {
+            TextBox textBox = (TextBox)sender;
+            curTextBox = textBox;
             Debug.WriteLine(((TextBox)sender).CaretIndex);
         }
 
@@ -454,50 +468,6 @@ namespace SrtStudio {
         #endregion
 
         #region Menu Events
-        private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
-            OpenFileDialog dialog = new OpenFileDialog {
-                Filter = videoFilter
-            };
-            if (dialog.ShowDialog() == true) {
-                player.Load(dialog.FileName);
-                Project.Data.VideoPath = dialog.FileName;
-            }
-        }
-
-        private void menuSrtImport_Click(object sender, RoutedEventArgs e) {
-            OpenFileDialog dialog = new OpenFileDialog {
-                Filter = srtFilter
-            };
-            if (dialog.ShowDialog() == true) {
-
-                Project.Data.Subtitles = Srt.Read(dialog.FileName);
-                Project.Data.TrackName = dialog.SafeFileName;
-                LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
-            }
-        }
-
-        private void menuSrtRefImport_Click(object sender, RoutedEventArgs e) {
-            OpenFileDialog dialog = new OpenFileDialog {
-                Filter = srtFilter
-            };
-            if (dialog.ShowDialog() == true) {
-                Project.Data.RefSubtitles = Srt.Read(dialog.FileName);
-                Project.Data.RefTrackName = dialog.SafeFileName;
-                LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
-            }
-        }
-
-        private void menuSrtExport_Click(object sender, RoutedEventArgs e) {
-            SaveFileDialog dialog = new SaveFileDialog {
-                AddExtension = true,
-                DefaultExt = "srt",
-                Filter = srtFilter
-            };
-            if (dialog.ShowDialog() == true) {
-                Srt.Write(dialog.FileName, Project.Data.Subtitles);
-            }
-        }
-
         private void menuProjectNew_Click(object sender, RoutedEventArgs e) {
             CloseProject();
         }
@@ -507,7 +477,6 @@ namespace SrtStudio {
                 Filter = projFilter
             };
             if (dialog.ShowDialog() == true && CloseProject()) {
-                Settings.Data.LastProject = dialog.FileName;
                 Settings.Save();
                 OpenProject(dialog.FileName);
             }
@@ -552,6 +521,62 @@ namespace SrtStudio {
         private void menuProjectClose_Click(object sender, RoutedEventArgs e) {
             CloseProject();
         }
+
+        private void menuVideoOpen_Click(object sender, RoutedEventArgs e) {
+            OpenFileDialog dialog = new OpenFileDialog {
+                Filter = videoFilter
+            };
+            if (dialog.ShowDialog() == true) {
+                player.Load(dialog.FileName);
+                Project.Data.VideoPath = dialog.FileName;
+            }
+        }
+
+        private void menuSrtImport_Click(object sender, RoutedEventArgs e) {
+            OpenFileDialog dialog = new OpenFileDialog {
+                Filter = srtFilter
+            };
+            if (dialog.ShowDialog() == true) {
+
+                Project.Data.Subtitles = Srt.Read(dialog.FileName);
+                Project.Data.TrackName = dialog.SafeFileName;
+                LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
+            }
+        }
+
+        private void menuSrtRefImport_Click(object sender, RoutedEventArgs e) {
+            OpenFileDialog dialog = new OpenFileDialog {
+                Filter = srtFilter
+            };
+            if (dialog.ShowDialog() == true) {
+                Project.Data.RefSubtitles = Srt.Read(dialog.FileName);
+                Project.Data.RefTrackName = dialog.SafeFileName;
+                LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
+            }
+        }
+
+        private void menuSrtExport_Click(object sender, RoutedEventArgs e) {
+            SaveFileDialog dialog = new SaveFileDialog {
+                AddExtension = true,
+                DefaultExt = "srt",
+                Filter = srtFilter
+            };
+            if (dialog.ShowDialog() == true) {
+                Srt.Write(dialog.FileName, Project.Data.Subtitles);
+            }
+        }
+
+        private void MenuEditInsert_Click(object sender, RoutedEventArgs e) {
+            Action_Insert();
+        }
+
+        private void MenuEditTrimEnd_Click(object sender, RoutedEventArgs e) {
+            Action_TrimEnd();
+        }
+
+        private void MenuEditMoveLineEnd_Click(object sender, RoutedEventArgs e) {
+            Action_MoveLineEnd();
+        }
         #endregion
 
         #region Window Events
@@ -569,17 +594,39 @@ namespace SrtStudio {
             }
         }
 
+        private void Action_PlayPause() {
+            if (player.IsPlaying)
+                player.Pause();
+            else player.Resume();
+        }
+
+        private void Action_Insert() {
+            InsertNewSubtitle();
+        }
+
+        private void Action_TrimEnd() {
+            TrimEnd(underNeedle);
+        }
+
+        private void Action_MoveLineEnd() {
+            TextBox textBox = curTextBox;
+            int caretIndex = textBox.CaretIndex;
+            string str = RemoveNewlines(textBox.Text);
+            str = str.Insert(caretIndex, Environment.NewLine);
+            str = TrimSpaces(str);
+            textBox.Text = str;
+            textBox.CaretIndex = caretIndex + 1;
+        }
+
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
             if (e.Key == Key.F5) {
-                if (player.IsPlaying)
-                    player.Pause();
-                else player.Resume();
+                Action_PlayPause();
             }
             if (e.Key == Key.F2) {
-                InsertNewSubtitle();
+                Action_Insert();
             }
             if (e.Key == Key.F8) {
-                TrimEnd(underNeedle);
+                Action_TrimEnd();
             }
         }
 

@@ -132,7 +132,7 @@
                                     </WindowsFormsHost>
 
                                     <Slider x:Name="slider" ValueChanged="Slider_ValueChanged" Maximum="100" IsMoveToPointEnabled="True" Height="20" VerticalAlignment="Bottom" Margin="38,0,5,4"/>
-                                    <Button x:Name="playButton" Content="►" Foreground="White" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
+                                    <Button x:Name="playButton" Content="►" ToolTip="Play/pause (F5)" Foreground="White" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
 
                                     <Grid x:Name="topGrid">
                                         <TextBox BorderThickness="0" Background="#00000000" x:Name="subDisplay" FontSize="18" Foreground="Yellow" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="10,10,10,55" FontFamily="Arial">
@@ -166,7 +166,7 @@
         <Menu Height="25" VerticalAlignment="Top" Background="#FF343434">
             <MenuItem Header="Project" Foreground="White">
                 <MenuItem x:Name="menuProjectNew" Header="New" InputGestureText="Ctrl+N" Foreground="Black" Click="menuProjectNew_Click"/>
-                <MenuItem x:Name="menuProjectOpen" InputGestureText="Ctrl+O" Header="Open..." Foreground="Black" Click="menuProjectOpen_Click"/>
+                <MenuItem x:Name="menuProjectOpen" Header="Open..." InputGestureText="Ctrl+O" Foreground="Black" Click="menuProjectOpen_Click"/>
                 <MenuItem x:Name="menuProjectSave" Header="Save" InputGestureText="Ctrl+S" Foreground="Black" Click="menuProjectSave_Click"/>
                 <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Foreground="Black" Click="menuProjectSaveAs_Click" />
                 <MenuItem x:Name="menuProjectClose" Header="Close" Foreground="Black" Click="menuProjectClose_Click"/>
@@ -178,6 +178,11 @@
                 <MenuItem x:Name="menuSrtImport" Header="Import..." Foreground="Black" Click="menuSrtImport_Click"/>
                 <MenuItem x:Name="menuSrtRefImport" Header="Import reference..." Foreground="Black" Click="menuSrtRefImport_Click"/>
                 <MenuItem x:Name="menuSrtExport" Header="Export..." Foreground="Black" Click="menuSrtExport_Click"/>
+            </MenuItem>
+            <MenuItem Header="Edit" Foreground="White">
+                <MenuItem x:Name="menuEditInsert" Header="Insert" InputGestureText="F2" Foreground="Black" Click="MenuEditInsert_Click"/>
+                <MenuItem x:Name="menuEditTrimEnd" Header="Trim end" InputGestureText="F8" Foreground="Black" Click="MenuEditTrimEnd_Click"/>
+                <MenuItem x:Name="menuEditMoveLineEnd" Header="Move line end to caret" InputGestureText="F4" Foreground="Black" Click="MenuEditMoveLineEnd_Click"/>
             </MenuItem>
         </Menu>
     </Grid>

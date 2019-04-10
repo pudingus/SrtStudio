@@ -29,6 +29,8 @@ namespace SrtStudio
         public static void Load(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
 
+            Settings.Data.LastProject = filename;
+
             using (FileStream stream = File.OpenRead(asBackup ? filename+".bak" : filename)) {
                 using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
                     Data = ser.Deserialize(zipStream) as ProjectStorage;
@@ -39,6 +41,8 @@ namespace SrtStudio
 
         public static void Save(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
+
+            Settings.Data.LastProject = filename;
 
             using (FileStream stream = File.Create(asBackup ? filename+".bak" : filename)) {
                 using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Compress)) {
