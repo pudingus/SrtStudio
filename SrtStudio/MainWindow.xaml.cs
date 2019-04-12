@@ -44,7 +44,7 @@ namespace SrtStudio {
         Track refTrack;
 
 
-        const string programName = "SrtStudio";
+
 
 
         const string srtFilter = "Srt - SubRip(*.srt)|*.srt";
@@ -56,11 +56,10 @@ namespace SrtStudio {
 
         ContextMenu contextMenu;
 
-        private bool unsavedChanges = false;
         private string _currentFile = "";
 
         DispatcherTimer bakTimer = new DispatcherTimer() {
-            Interval = TimeSpan.FromMinutes(1.0)
+            Interval = TimeSpan.FromSeconds(10)
         };
 
         private TextBox curTextBox;
@@ -82,7 +81,19 @@ namespace SrtStudio {
                 Volume = 100
             };
             player.API.SetPropertyString("sid", "no");  //disable subtitles
+            player.API.SetPropertyString("keep-open", "yes");
             player.PositionChanged += Player_PositionChanged;
+            player.MediaFinished += Player_MediaFinished;
+            //player.API.SetPropertyString("demuxer-max-back-bytes", "50MiB");
+            //player.API.SetPropertyString("demuxer-max-bytes", "150MiB");
+
+
+            //MessageBox.Show(player.API.GetPropertyString("cache"));
+            //MessageBox.Show(player.API.GetPropertyString("cache-secs"));
+            //MessageBox.Show(player.API.GetPropertyString("demuxer-max-back-bytes"));
+
+            //MessageBox.Show(player.API.GetPropertyString("demuxer-max-bytes"));
+
 
 
             UpdateTitle("Untitled");
@@ -93,14 +104,14 @@ namespace SrtStudio {
             }
             if (!Settings.Data.SafelyExited && Settings.Data.LastProject != null) {
                 var result = MessageBox.Show(
-                    "Program didn't safely exit last time, \nDo you want to restore backup?",
+                    $"Program didn't safely exit last time, \ndo you want to restore backup for {Path.GetFileName(Settings.Data.LastProject)}?",
                     "Restore",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning
                 );
                 if (result == MessageBoxResult.Yes) {
                     try {
-                        OpenProject(Settings.Data.LastProject);
+                        OpenProject(Settings.Data.LastProject, true);
                     }
                     catch (Exception) {
                         MessageBox.Show("error");
@@ -127,8 +138,24 @@ namespace SrtStudio {
             timeline.OnChunkUpdated += Timeline_OnChunkUpdated;
             timeline.ChunkContextMenuOpening += Chunk_ContextMenuOpening;
             timeline.ChunkContextMenu = contextMenu;
+
+            timeline.ContextMenuOpening += Timeline_ContextMenuOpening;
+            timeline.ContextMenu = (ContextMenu)FindResource("InsertContextMenu");
         }
 
+        private void Player_MediaFinished(object sender, EventArgs e) {
+            player.Pause();
+            player.Position = player.Duration;
+        }
+
+        private void Timeline_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+
+        }
+
+
+        private void MenuItemInsert_Click(object sender, RoutedEventArgs e) {
+            Action_Insert();
+        }
 
         private void LoadSubtitles(List<Subtitle> subtitles, string trackName) {
             SuperList.Clear();
@@ -185,14 +212,16 @@ namespace SrtStudio {
         }
 
         private void BakTimer_Tick(object sender, EventArgs e) {
-            //MessageBox.Show("saving...");
-            try {
-                Project.Save(Project.FileName, true);
-            }
-            catch (IOException) {
-                MessageBox.Show("IOException Error");
-            }
 
+            if (Project.UnwrittenChanges) {
+                try {
+                    Debug.WriteLine("saving backup...");
+                    Project.Save(Project.FileName, true);
+                }
+                catch (IOException) {
+                    MessageBox.Show("IOException Error");
+                }
+            }
         }
 
         #region Methods
@@ -218,6 +247,8 @@ namespace SrtStudio {
                     player.Position = position;
                 }
             }
+
+
             string str = "";
             underNeedle = null;
 
@@ -227,6 +258,13 @@ namespace SrtStudio {
                         listView.SelectionMode = SelectionMode.Single;
                         listView.SelectedItem = item;
                         listView.SelectionMode = SelectionMode.Extended;
+
+                        Task.Delay(100).ContinueWith(t => {
+                            Dispatcher.Invoke(() => {
+                                //listView.ScrollIntoView(item);
+
+                            });
+                        });
                     }
                     str = item.Text;
                     underNeedle = item;
@@ -244,7 +282,7 @@ namespace SrtStudio {
         private void UpdateTitle(string currentFile) {
             _currentFile = currentFile;
             string str = "";
-            if (unsavedChanges) str = "*";
+            if (Project.UnsavedChanges) str = "*";
             int index = 0;
             int count = 0;
             double perc = 0.0;
@@ -260,7 +298,7 @@ namespace SrtStudio {
 
         private bool CloseProject() {
 
-            if (unsavedChanges && UnsavedChangesDialog() == MessageBoxResult.Cancel) {
+            if (Project.UnsavedChanges && UnsavedChangesDialog() == MessageBoxResult.Cancel) {
                 return false;
             }
 
@@ -290,15 +328,22 @@ namespace SrtStudio {
                 Dispatcher.Invoke(() => {
                     timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
                     Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
+
+                    timeline.stack.MinWidth = player.Duration.TotalSeconds / timeline.timescale * timeline.pixelscale;
+
                 });
             });
+
+            listView.SelectedIndex = Project.Data.SelIndex;
+
+
         }
 
         private MessageBoxResult UnsavedChangesDialog() {
             var result = MessageBox.Show(
-                "There are unsaved changes. \nDo you really want to proceed?",
-                "Unsaved changes",
-                MessageBoxButton.OKCancel,
+                $"Do you want to save changes you made to {Path.GetFileName(Project.FileName)}? \n\nYour changes will be lost if you don't save them.",
+                "Save changes?",
+                MessageBoxButton.YesNoCancel,
                 MessageBoxImage.Exclamation
             );
             return result;
@@ -336,6 +381,8 @@ namespace SrtStudio {
                 }
             }
             RecalculateIndexes();
+
+            Project.FlagChange();
         }
         #endregion
 
@@ -346,7 +393,7 @@ namespace SrtStudio {
         }
 
         private void Timeline_OnChunkUpdated(Chunk chunk) {
-            unsavedChanges = true;
+            Project.FlagChange();
             UpdateTitle(_currentFile);
         }
 
@@ -428,7 +475,7 @@ namespace SrtStudio {
             if (item == underNeedle) {
                 subDisplay.Text = item.Text;
             }
-            unsavedChanges = true;
+            Project.FlagChange();
             UpdateTitle(_currentFile);
         }
 
@@ -459,6 +506,8 @@ namespace SrtStudio {
         }
 
         private void Player_PositionChanged(object sender, MpvPlayerPositionChangedEventArgs e) {
+
+
             Dispatcher.Invoke(() => {
                 if (player.IsPlaying) {
                     Seek(e.NewPosition, player);
@@ -491,7 +540,6 @@ namespace SrtStudio {
                 };
                 if (dialog.ShowDialog() == true) {
                     Project.Save(dialog.FileName);
-                    unsavedChanges = false;
                     UpdateTitle(dialog.SafeFileName);
                 }
             }
@@ -500,7 +548,6 @@ namespace SrtStudio {
                 Project.Data.VideoPos = player.Position.TotalSeconds;
                 Project.Data.ScrollPos = timeline.svHor.HorizontalOffset;
                 Project.Save(Project.FileName);
-                unsavedChanges = false;
                 UpdateTitle(_currentFile);
             }
         }
@@ -513,7 +560,6 @@ namespace SrtStudio {
             };
             if (dialog.ShowDialog() == true) {
                 Project.Save(dialog.FileName);
-                unsavedChanges = false;
                 UpdateTitle(dialog.SafeFileName);
             }
         }
@@ -582,15 +628,66 @@ namespace SrtStudio {
         #region Window Events
         private void Window_Closing(object sender, CancelEventArgs e) {
 
-            if (unsavedChanges && UnsavedChangesDialog() == MessageBoxResult.Cancel) {
-                e.Cancel = true;
-            }
-            else {
-                if (WindowState == WindowState.Maximized) {
-                    Settings.Data.Maximized = true;
+            if (Project.UnsavedChanges) {
+                var result = UnsavedChangesDialog();
+                if (result == MessageBoxResult.Cancel) {
+                    e.Cancel = true;
+                    return;
                 }
-                Settings.Data.SafelyExited = true;
-                Settings.Save();
+                else if (result == MessageBoxResult.No) {
+                    if (WindowState == WindowState.Maximized) {
+                        Settings.Data.Maximized = true;
+                    }
+
+                }
+                else if (result ==  MessageBoxResult.Yes) {
+                    if (string.IsNullOrEmpty(Project.FileName)) {
+                        SaveFileDialog dialog = new SaveFileDialog {
+                            AddExtension = true,
+                            DefaultExt = projExt,
+                            Filter = projFilter
+                        };
+                        if (dialog.ShowDialog() == true) {
+                            try {
+                                Project.Save(dialog.FileName);
+                            }
+                            catch (IOException ex) {
+                                MessageBox.Show(ex.Message, "error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                e.Cancel = true;
+                                return;
+                            }
+                        }
+                    }
+                    else {
+                        Project.Data.SelIndex = listView.SelectedIndex;
+                        Project.Data.VideoPos = player.Position.TotalSeconds;
+                        Project.Data.ScrollPos = timeline.svHor.HorizontalOffset;
+                        try {
+                            Project.Save(Project.FileName);
+                        }
+                        catch (IOException ex) {
+                            MessageBox.Show(ex.Message, "error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            e.Cancel = true;
+                            return;
+                        }
+                    }
+                    if (WindowState == WindowState.Maximized) {
+                        Settings.Data.Maximized = true;
+                    }
+                    Settings.Data.SafelyExited = true;
+                    Settings.Save();
+                }
+            }
+
+            Settings.Data.SafelyExited = true;
+            Settings.Save();
+
+            if (string.IsNullOrEmpty(Project.FileName)) MessageBox.Show("empty project.filename");
+            else {
+                if (File.Exists(Project.FileName + ".temp")) {
+                    File.Delete(Project.FileName + ".temp");
+
+                }
             }
         }
 
@@ -636,12 +733,16 @@ namespace SrtStudio {
                 pos = timeline.Position;
                 start = item.Start;
                 dur = pos - start;
-                if (dur < TimeSpan.FromSeconds(1.5)) {
-                    MessageBox.Show("no");
+                if (dur < TimeSpan.FromSeconds(1.2)) {
+                    MessageBox.Show("too short, correcting...");
+                    item.End = item.Start + TimeSpan.FromSeconds(1.2);
+                    item.Chunk.Update();
+                    Project.FlagChange();
                 }
                 else {
                     item.End = timeline.Position;
                     item.Chunk.Update();
+                    Project.FlagChange();
                 }
             }
         }
@@ -675,6 +776,8 @@ namespace SrtStudio {
 
                 listView.SelectedItems.Add(item);
                 item.Selected = true;
+
+                Project.FlagChange();
             }
         }
         #endregion
@@ -704,6 +807,7 @@ namespace SrtStudio {
                 editTrack.Super.Remove(item);
             }
             RecalculateIndexes();
+            Project.FlagChange();
         }
 
         private void PrepareContextMenu(Item item, ContextMenu contextMenu) {
@@ -732,6 +836,7 @@ namespace SrtStudio {
         }
 
         private void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+            Debug.WriteLine("Chunk_ContextMenuOpening");
             Chunk chunk = (Chunk)sender;
             Item item = (Item)chunk.DataContext;
             ContextMenu contextMenu = chunk.ContextMenu;
@@ -746,5 +851,6 @@ namespace SrtStudio {
         private void ListViewItem_TextInput(object sender, TextCompositionEventArgs e) {
             Debug.WriteLine("item text input");
         }
+
     }
 }

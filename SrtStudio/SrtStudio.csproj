@@ -118,6 +118,7 @@
     <Compile Include="HtmlRichTextBox.cs" />
     <Compile Include="InlineTextBlock.cs" />
     <Compile Include="Item.cs" />
+    <Compile Include="Local.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Srt.cs" />
     <Compile Include="StringOperations.cs" />

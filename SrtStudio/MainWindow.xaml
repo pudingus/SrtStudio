@@ -16,6 +16,9 @@
             <MenuItem Header="Merge as dialog" Click="MenuItemMergeDialog_Click"></MenuItem>
             <MenuItem Header="Delete" Click="MenuItemDelete_Click"></MenuItem>
         </ContextMenu>
+        <ContextMenu x:Key="InsertContextMenu">
+            <MenuItem Header="Insert" Click="MenuItemInsert_Click"></MenuItem>
+        </ContextMenu>
     </Window.Resources>
     <Grid>
 
@@ -135,7 +138,7 @@
                                     <Button x:Name="playButton" Content="►" ToolTip="Play/pause (F5)" Foreground="White" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
 
                                     <Grid x:Name="topGrid">
-                                        <TextBox BorderThickness="0" Background="#00000000" x:Name="subDisplay" FontSize="18" Foreground="Yellow" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="10,10,10,55" FontFamily="Arial">
+                                        <TextBox SpellCheck.IsEnabled="True" BorderThickness="0" Background="#00000000" x:Name="subDisplay" FontSize="18" Foreground="Yellow" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="10,10,10,55" FontFamily="Arial">
                                             <TextBox.Text>
                                                 What do you mean? lol
                                             </TextBox.Text>

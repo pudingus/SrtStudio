@@ -145,6 +145,7 @@ namespace SrtStudio
             chunk.MouseLeave += Chunk_MouseLeave;
             chunk.PreviewMouseDoubleClick += Chunk_PreviewMouseDoubleClick;
 
+
             if (track.Locked) {
                 chunk.Locked = true;
                 var bc = new BrushConverter();
@@ -305,12 +306,7 @@ namespace SrtStudio
             e.Handled = true;
         }
 
-        public ContextMenu ChunkContextMenu { get; set; }
-        public event ContextMenuEventHandler ChunkContextMenuOpening;
 
-        private void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
-            ChunkContextMenuOpening?.Invoke(sender, e);
-        }
 
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -405,6 +401,8 @@ namespace SrtStudio
             }
             if (afterPoint && draggedChunk != null) return;
 
+            //disable seeking while multiselecting chunks with ctrl
+            if (Keyboard.Modifiers == ModifierKeys.Control) return;
 
             if (!afterPoint && draggedChunk != null) {
                 if (draggingPoint == DraggingPoint.Start) {
@@ -429,6 +427,32 @@ namespace SrtStudio
                 OnNeedleMoved?.Invoke();
             }
         }
+
+        public ContextMenu ChunkContextMenu { get; set; }
+        public event ContextMenuEventHandler ChunkContextMenuOpening;
+        bool chunkCtxMenu = false;
+
+        private void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+            ChunkContextMenuOpening?.Invoke(sender, e);
+            chunkCtxMenu = true;
+        }
+
+        private void UserControl_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+            //dirty hack
+            //Task.Delay(2).ContinueWith(t => {
+            //    Dispatcher.Invoke(() => {
+            //        if (!chunkCtxMenu) {
+            //            if (!afterPoint &&draggedChunk == null) {
+            //                Point pointe = Mouse.GetPosition(stack);
+            //                needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+            //                OnNeedleMoved?.Invoke();
+            //            }
+            //        }
+            //        chunkCtxMenu = false;
+            //    });
+            //});
+        }
+
 
         bool afterDblClick;
         private void Chunk_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e) {
@@ -563,6 +587,5 @@ namespace SrtStudio
                 }
             }
         }
-
     }
 }
