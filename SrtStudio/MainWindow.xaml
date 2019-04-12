@@ -187,6 +187,9 @@
                 <MenuItem x:Name="menuEditTrimEnd" Header="Trim end" InputGestureText="F8" Foreground="Black" Click="MenuEditTrimEnd_Click"/>
                 <MenuItem x:Name="menuEditMoveLineEnd" Header="Move line end to caret" InputGestureText="F4" Foreground="Black" Click="MenuEditMoveLineEnd_Click"/>
             </MenuItem>
+            <MenuItem Header="Options" Foreground="White">
+                <MenuItem x:Name="menuOptionsRipple" Header="Ripple" IsCheckable="True" Foreground="Black" Click="MenuOptionsRipple_Click"/>
+            </MenuItem>
         </Menu>
     </Grid>
 </Window>

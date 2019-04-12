@@ -36,6 +36,9 @@ namespace SrtStudio {
     public partial class MainWindow : Window {
         private MpvPlayer player;
 
+        /// <summary>
+        /// K čemu to kurňa je?
+        /// </summary>
         public ObservableCollection<Item> SuperList { get; set; } = new ObservableCollection<Item>();
         public ObservableCollection<Item> SuperListRef { get; set; } = new ObservableCollection<Item>();
 
@@ -356,6 +359,7 @@ namespace SrtStudio {
         }
 
         private void Merge(IList items, bool asDialog = false) {
+            //sort 'items' by subtitle index in ascending order
             var sl = new List<Item>();
             foreach (Item item in SuperList)
                 if (items.Contains(item)) sl.Add(item);
@@ -725,6 +729,20 @@ namespace SrtStudio {
             if (e.Key == Key.F8) {
                 Action_TrimEnd();
             }
+            if (e.Key == Key.Right) {
+                var newPos = player.Position + TimeSpan.FromMilliseconds(100);
+                Seek(newPos);
+            }
+            if (e.Key == Key.Left) {
+                var newPos = player.Position - TimeSpan.FromMilliseconds(100);
+                Seek(newPos);
+            }
+        }
+
+        private void MenuOptionsRipple_Click(object sender, RoutedEventArgs e) {
+            //IsChecked reports value after click
+            //MessageBox.Show($"checked: {menuOptionsRipple.IsChecked}");
+            timeline.Ripple = menuOptionsRipple.IsChecked;
         }
 
         private void TrimEnd(Item item) {

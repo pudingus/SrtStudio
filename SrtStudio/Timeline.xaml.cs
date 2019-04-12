@@ -30,26 +30,51 @@ namespace SrtStudio
         public delegate void ChunkUpdated(Chunk chunk);
         public event ChunkUpdated OnChunkUpdated;
 
-
-
-        TrackMeta draggedMeta;
-        const int dragSize = 10;
-        Point point;
-
-
-        DispatcherTimer timer = new DispatcherTimer();
         public ObservableCollection<Item> SelectedItems { get; } = new ObservableCollection<Item>();
-        bool beforetime = true;
-        double startdeltax;
-        bool afterPoint = false;
-        Chunk draggedChunk;
-        DraggingPoint draggingPoint;
 
         public enum DraggingPoint {
             Start,
             Middle,
             End
         }
+
+        public readonly int timescale = 10;   //one page is 'scale' (30) seconds
+        public readonly int pixelscale = 1000;
+
+        public bool Ripple { get; set; }
+
+
+        private List<Track> _tracks = new List<Track>();
+        public IEnumerable<Track> Tracks {
+            get {
+                return _tracks.AsReadOnly();
+            }
+        }
+
+        public TimeSpan Position {
+            get {
+                double start = needle.Margin.Left / pixelscale * timescale;
+                return TimeSpan.FromSeconds(start);
+            }
+            set {
+                double margin = value.TotalSeconds / timescale * pixelscale;
+                needle.Margin = new Thickness(margin, 0, 0, 0);
+            }
+        }
+
+        public ContextMenu ChunkContextMenu { get; set; }
+        public event ContextMenuEventHandler ChunkContextMenuOpening;
+
+        TrackMeta draggedMeta;
+        const int dragSize = 10;
+        Point point;
+
+        DispatcherTimer timer = new DispatcherTimer();
+        bool beforetime = true;
+        double startdeltax;
+        bool afterPoint = false;
+        Chunk draggedChunk;
+        DraggingPoint draggingPoint;
 
         public Timeline() {
             InitializeComponent();
@@ -63,45 +88,11 @@ namespace SrtStudio
             OnChunkUpdated += Timeline_OnChunkUpdated;
         }
 
-        public readonly int timescale = 10;   //one page is 'scale' (30) seconds
-        public readonly int pixelscale = 1000;
-
-        private List<Track> _tracks = new List<Track>();
-        public IEnumerable<Track> Tracks {
-            get {
-                return _tracks.AsReadOnly();
-            }
-        }
-
-
-        public TimeSpan Position {
-            get {
-                double start = needle.Margin.Left / pixelscale * timescale;
-                return TimeSpan.FromSeconds(start);
-            }
-            set {
-                double margin = value.TotalSeconds / timescale * pixelscale;
-                needle.Margin = new Thickness(margin, 0, 0, 0);
-            }
-        }
-
         public void FocusNeedle() {
             needle.BringIntoView(new Rect(new Size(50, 50)));
         }
 
-        private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
-            if (e.OldItems != null) {
-                foreach (Item item in e.OldItems) {
-                    item.Selected = false;
-                }
-            }
 
-            if (e.NewItems != null) {
-                foreach (Item item in e.NewItems) {
-                    item.Selected = true;
-                }
-            }
-        }
 
         public void AddTrack(Track track, bool toBottom = false) {
             track.TrackMeta.MouseMove += TrackMeta_MouseMove;
@@ -145,24 +136,14 @@ namespace SrtStudio
             chunk.MouseLeave += Chunk_MouseLeave;
             chunk.PreviewMouseDoubleClick += Chunk_PreviewMouseDoubleClick;
 
-
             if (track.Locked) {
                 chunk.Locked = true;
                 var bc = new BrushConverter();
                 chunk.backRect.Fill = (Brush)bc.ConvertFrom("#FF3C3C3C");
             }
-            //Brush brush = chunk.backRect.Fill;
-            //Color color = ((SolidColorBrush)brush).Color;
-
-            //color = Darken(color, 2.0f);
-
-
-            //chunk.backRect.Stroke = new SolidColorBrush(color);
 
             track.TrackLine.Children.Add(chunk);
-
-            //TrackLine.itemsControl.Items.Add(chunk);
-            //TrackLine.ChunksSuper.Add(chunk);
+            chunk.ParentTrack = track;
         }
 
 
@@ -184,6 +165,20 @@ namespace SrtStudio
         }
 
 
+
+        private void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
+            if (e.OldItems != null) {
+                foreach (Item item in e.OldItems) {
+                    item.Selected = false;
+                }
+            }
+
+            if (e.NewItems != null) {
+                foreach (Item item in e.NewItems) {
+                    item.Selected = true;
+                }
+            }
+        }
 
         private void TrackMeta_MouseMove(object sender, MouseEventArgs e) {
             TrackMeta trackMeta = sender as TrackMeta;
@@ -268,21 +263,59 @@ namespace SrtStudio
                         OnChunkUpdated?.Invoke(chunk);
 
                     }
+                    //user is moving his mouse after he clicked in the middle of a chunk
                     else if (draggingPoint == DraggingPoint.Middle) {
-                        foreach (Item item in SelectedItems) {
-                            double mleft = item.Chunk.Margin.Left;
-                            mleft -= deltax;
-                            item.Chunk.Margin = new Thickness(mleft, 0, 0, 0);
-                            OnChunkUpdated?.Invoke(item.Chunk);
+                        if (!Ripple) {
+                            foreach (Item item in SelectedItems) {
+
+                                TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / pixelscale * timescale);
+                                item.Start -= timeDelta;
+                                item.End -= timeDelta;
+
+                                ////old way
+                                //double mleft = item.Chunk.Margin.Left;
+                                //mleft -= deltax;
+                                //item.Chunk.Margin = new Thickness(mleft, 0, 0, 0);
+                                //OnChunkUpdated?.Invoke(item.Chunk);
+                            }
+                            UpdateStreamedChunks(draggedChunk.ParentTrack);
+                            RecalculateStreamedSet(draggedChunk.ParentTrack);
+
                         }
+                        else {
+                            //loop from selected item forward
+                            for (int i = draggedChunk.Item.Index-1; i < draggedChunk.ParentTrack.Super.Count; i++) {
+                                Item item = draggedChunk.ParentTrack.Super[i];
+                                TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / pixelscale * timescale);
+                                item.Start -= timeDelta;
+                                item.End -= timeDelta;
+
+                                //Item item = draggedChunk.ParentTrack.Super[i];
+                                //double mleft = item.Chunk.Margin.Left;
+                                //mleft -= deltax;
+                                //item.Chunk.Margin = new Thickness(mleft, 0, 0, 0);
+                                //OnChunkUpdated?.Invoke(item.Chunk);
+                            }
+                            UpdateStreamedChunks(draggedChunk.ParentTrack);
+                            RecalculateStreamedSet(draggedChunk.ParentTrack);
+                        }
+
                     }
                 }
+            }
+        }
+
+        private void UpdateStreamedChunks(Track track) {
+            foreach (Item item in track.Streamed) {
+                item.Chunk.Update();
             }
         }
 
         private void Timeline_OnChunkUpdated(Chunk chunk) {
             Item item = (Item)chunk.DataContext;
 
+
+            //correct values in 'item'
             double start = chunk.Margin.Left / pixelscale * timescale;
             item.Start = TimeSpan.FromSeconds(start);
 
@@ -307,7 +340,7 @@ namespace SrtStudio
         }
 
 
-
+        TimeSpan scrollHorizonLeft, scrollHorizonRight;
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
@@ -334,28 +367,32 @@ namespace SrtStudio
             if (e.HorizontalChange == 0) return;
 
             double val = svHor.HorizontalOffset / pixelscale * timescale;
-            TimeSpan horizonLeft = TimeSpan.FromSeconds(val);
+            scrollHorizonLeft = TimeSpan.FromSeconds(val);
             val = (svHor.ViewportWidth + svHor.HorizontalOffset) / pixelscale * timescale;
-            TimeSpan horizonRight = TimeSpan.FromSeconds(val);
+            scrollHorizonRight = TimeSpan.FromSeconds(val);
 
             foreach (Track track in Tracks) {
+                RecalculateStreamedSet(track);
+            }
+        }
 
-                foreach (Item item in track.Super) {
-                    if (item.Start <= horizonRight && item.End >= horizonLeft) {
-                        if (!track.Streamed.Contains(item)) {
-                            track.Streamed.Add(item);
-                            Chunk chunk = new Chunk(this, item) {
-                                ContextMenu = ChunkContextMenu
-                            };
-                            chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
-                            item.Chunk = chunk;
-                            AddChunk(chunk, track);
-                        }
+        private void RecalculateStreamedSet(Track track) {
+
+            foreach (Item item in track.Super) {
+                if (item.Start <= scrollHorizonRight && item.End >= scrollHorizonLeft) {
+                    if (!track.Streamed.Contains(item)) {
+                        track.Streamed.Add(item);
+                        Chunk chunk = new Chunk(this, item) {
+                            ContextMenu = ChunkContextMenu
+                        };
+                        chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+                        item.Chunk = chunk;
+                        AddChunk(chunk, track);
                     }
-                    else {
-                        track.Streamed.Remove(item);
-                        RemoveChunk(item.Chunk, track);
-                    }
+                }
+                else {
+                    track.Streamed.Remove(item);
+                    RemoveChunk(item.Chunk, track);
                 }
             }
         }
@@ -428,13 +465,12 @@ namespace SrtStudio
             }
         }
 
-        public ContextMenu ChunkContextMenu { get; set; }
-        public event ContextMenuEventHandler ChunkContextMenuOpening;
-        bool chunkCtxMenu = false;
+
+        //bool chunkCtxMenu = false;
 
         private void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
             ChunkContextMenuOpening?.Invoke(sender, e);
-            chunkCtxMenu = true;
+            //chunkCtxMenu = true;
         }
 
         private void UserControl_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
@@ -512,14 +548,15 @@ namespace SrtStudio
                 Point pointc = e.GetPosition(chunk);
                 startPoint = e.GetPosition(stackMeta);
 
+                //is cursor vertically in chunk bounds
                 if (pointc.Y >= 0 && pointc.Y <= chunk.ActualHeight) {
+                    //isMouseAtStartBorder
                     if ((pointc.X >= 0 && pointc.X <= dragSize)) {
                         draggingPoint = DraggingPoint.Start;
                         draggedChunk = chunk;
                         Mouse.Capture(chunk);
-
-
                     }
+                    //EndBorder
                     else if (pointc.X >= chunk.ActualWidth - dragSize && pointc.X <= chunk.ActualWidth) {
                         draggingPoint = DraggingPoint.End;
                         draggedChunk = chunk;
@@ -527,10 +564,15 @@ namespace SrtStudio
                         startPoint = e.GetPosition(stackMeta);
 
                     }
+                    //Middle
                     else {
                         draggingPoint = DraggingPoint.Middle;
                         draggedChunk = chunk;
                         Mouse.Capture(chunk);
+
+                        if (Ripple) {
+
+                        }
                     }
                 }
 

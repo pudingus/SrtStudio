@@ -35,14 +35,14 @@ namespace SrtStudio
         private Timeline _parent;
         public Item Item { get; }
 
-
+        public Track ParentTrack { get; set; }
 
         public Chunk(Timeline parent, Item item)
         {
             _parent = parent;
             Item = item;
             InitializeComponent();
-            selBorder.Visibility = Visibility.Hidden;
+            selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
             hilitBorder.Visibility = Visibility.Hidden;
 
             Item.PropertyChanged += Item_PropertyChanged;
@@ -58,8 +58,7 @@ namespace SrtStudio
         private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
             Item item = (Item)sender;
             if (e.PropertyName == nameof(item.Selected)) {
-                if (item.Selected) selBorder.Visibility = Visibility.Visible;
-                else selBorder.Visibility = Visibility.Hidden;
+                selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
             }
             //else if (e.PropertyName == nameof(item.Start)) {
             //    double margin = item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;

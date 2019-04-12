@@ -18,6 +18,9 @@ namespace SrtStudio
         public bool Locked { get; set; }
 
         public List<Item> Streamed;
+        /// <summary>
+        /// All items in the track?
+        /// </summary>
         public ObservableCollection<Item> Super;
 
 
