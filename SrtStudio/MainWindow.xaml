@@ -176,6 +176,7 @@
             </MenuItem>
             <MenuItem Header="Video" Foreground="White">
                 <MenuItem x:Name="menuVideoOpen" Header="Open..." Foreground="Black" Click="menuVideoOpen_Click"/>
+                <MenuItem x:Name="menuVideoClose" Header="Close" Foreground="Black" Click="menuVideoClose_Click"/>
             </MenuItem>
             <MenuItem Header="Srt" Foreground="White">
                 <MenuItem x:Name="menuSrtImport" Header="Import..." Foreground="Black" Click="menuSrtImport_Click"/>
@@ -185,7 +186,7 @@
             <MenuItem Header="Edit" Foreground="White">
                 <MenuItem x:Name="menuEditInsert" Header="Insert" InputGestureText="F2" Foreground="Black" Click="MenuEditInsert_Click"/>
                 <MenuItem x:Name="menuEditTrimEnd" Header="Trim end" InputGestureText="F8" Foreground="Black" Click="MenuEditTrimEnd_Click"/>
-                <MenuItem x:Name="menuEditMoveLineEnd" Header="Move line end to caret" InputGestureText="F4" Foreground="Black" Click="MenuEditMoveLineEnd_Click"/>
+                <MenuItem x:Name="menuEditMoveLineEnd" Header="Shift line break to caret" InputGestureText="F4" Foreground="Black" Click="MenuEditShiftLineBreak_Click"/>
             </MenuItem>
             <MenuItem Header="Options" Foreground="White">
                 <MenuItem x:Name="menuOptionsRipple" Header="Ripple" IsCheckable="True" Foreground="Black" Click="MenuOptionsRipple_Click"/>

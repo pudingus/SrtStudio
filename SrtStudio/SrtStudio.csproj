@@ -122,6 +122,7 @@
     <Compile Include="Settings.cs" />
     <Compile Include="Srt.cs" />
     <Compile Include="StringOperations.cs" />
+    <Compile Include="Subtitle.cs" />
     <Compile Include="Timeline.xaml.cs">
       <DependentUpon>Timeline.xaml</DependentUpon>
     </Compile>
@@ -238,5 +239,6 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
