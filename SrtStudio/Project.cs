@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using System.IO;
 using System.IO.Compression;
+using System.Windows.Threading;
+using System.Windows;
+
 
 namespace SrtStudio
 {
@@ -26,9 +29,53 @@ namespace SrtStudio
         public static string FileName { get; private set; }
         public static ProjectStorage Data { get; set; } = new ProjectStorage();
         public static bool UnsavedChanges { get; private set; }
-        public static bool UnwrittenChanges { get; private set; }
+        public static bool UnwrittenChanges { get; private set; }        
 
-        public static void Load(string filename, bool asBackup = false) {
+        public static void Open(string filename, bool asBackup = false) {
+            var mainWindow = MainWindow.Instance;
+
+            Project.Read(filename, asBackup);
+            mainWindow.UpdateTitle(Path.GetFileName(filename));
+            if (!string.IsNullOrEmpty(Project.Data.VideoPath))
+                mainWindow.player.Load(Project.Data.VideoPath);
+
+
+            Project.Data.Subtitles = Project.Data.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
+
+            mainWindow.LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
+            mainWindow.LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
+
+            Task.Delay(200).ContinueWith(t => {
+                mainWindow.Dispatcher.Invoke(() => {
+                    mainWindow.timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
+                    mainWindow.Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
+
+                    mainWindow.timeline.stack.MinWidth = mainWindow.player.Duration.TotalSeconds / mainWindow.timeline.timescale * mainWindow.timeline.pixelscale;
+
+                });
+            });
+
+            mainWindow.listView.SelectedIndex = Project.Data.SelIndex;
+        }
+
+        public static bool Close() {
+            var mainWindow = MainWindow.Instance;
+
+            if (Project.UnsavedChanges && Dialogs.UnsavedChanges() == MessageBoxResult.Cancel) {
+                return false;
+            }
+
+            mainWindow.SuperList.Clear();
+            mainWindow.player.Stop();
+            mainWindow.player.PlaylistClear();
+            mainWindow.timeline.ClearTracks();
+            Project.Data.Subtitles = null;
+            Project.Data.RefSubtitles = null;
+            mainWindow.UpdateTitle("Untitled");
+            return true;
+        }
+
+        private static void Read(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
 
             Settings.Data.LastProject = filename;
@@ -55,7 +102,7 @@ namespace SrtStudio
         /// <exception cref="IOException"></exception>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public static void Save(string filename, bool asBackup = false) {
+        public static void Write(string filename, bool asBackup = false) {
             XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
 
             Settings.Data.LastProject = filename;
@@ -70,7 +117,7 @@ namespace SrtStudio
             }
         }
 
-        public static void FlagChange() {
+        public static void SignalChange() {
             UnsavedChanges = true;
             UnwrittenChanges = true;
         }

@@ -180,16 +180,28 @@ namespace SrtStudio
             }
         }
 
+        bool IsCursorHorizontallyInMetaBounds(Point cursorPos, TrackMeta trackMeta) {
+            return cursorPos.X >= 0 && cursorPos.X <= trackMeta.ActualWidth;
+        }
+
+        bool IsCursorVerticallyAtMetaResizeBorder(Point cursorPos, TrackMeta trackMeta) {
+            return cursorPos.Y >= trackMeta.ActualHeight - dragSize && cursorPos.Y <= trackMeta.ActualHeight;
+        }
+
+        bool IsCursorAtMetaResizeBorder(Point cursorPos, TrackMeta trackMeta) {
+            return IsCursorHorizontallyInMetaBounds(cursorPos, trackMeta) && 
+                IsCursorVerticallyAtMetaResizeBorder(cursorPos, trackMeta);
+        }
+
         private void TrackMeta_MouseMove(object sender, MouseEventArgs e) {
             TrackMeta trackMeta = sender as TrackMeta;
             Point pointe = e.GetPosition(trackMeta);
 
             Cursor cursor = Cursors.Arrow;
-            if (pointe.X >= 0 && pointe.X <= trackMeta.ActualWidth) {
-                if (pointe.Y >= trackMeta.ActualHeight - dragSize && pointe.Y <= trackMeta.ActualHeight) {
-                    cursor = Cursors.SizeNS;
-                }
+            if (IsCursorAtMetaResizeBorder(pointe, trackMeta)) {
+                cursor = Cursors.SizeNS;
             }
+           
             Cursor = cursor;
         }
 
@@ -201,12 +213,10 @@ namespace SrtStudio
             TrackMeta trackMeta = sender as TrackMeta;
             Point pointe = e.GetPosition(trackMeta);
 
-            if (pointe.X >= 0 && pointe.X <= trackMeta.ActualWidth) {
-                if (pointe.Y >= trackMeta.ActualHeight - dragSize && pointe.Y <= trackMeta.ActualHeight) {
-                    draggedMeta = trackMeta;
-                    Mouse.Capture(trackMeta);
-                }
-            }
+            if (IsCursorAtMetaResizeBorder(pointe, trackMeta)) {
+                draggedMeta = trackMeta;
+                Mouse.Capture(trackMeta);
+            }            
         }
 
         private void TrackMeta_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
@@ -458,10 +468,28 @@ namespace SrtStudio
 
 
             }
-            if (!afterPoint &&draggedChunk == null) {
+            if (!afterPoint && draggedChunk == null) {
                 Point pointe = e.GetPosition(stack);
-                needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-                OnNeedleMoved?.Invoke();
+
+                Point pointscr = e.GetPosition(scrollbar);
+
+                Debug.WriteLine($"{pointe.X} {pointe.Y}");
+                Debug.WriteLine($"{pointscr.X} {pointscr.Y}");
+
+
+
+                //not on scrollbar
+                if (pointscr.Y < 0) {
+                    
+
+                    if (point.X > stackMeta.ActualWidth) {
+                        needle.Margin = new Thickness(pointe.X, 0, 0, 0);
+                        OnNeedleMoved?.Invoke();
+                        Debug.WriteLine("DIS!");
+                    }
+                }
+
+                
             }
         }
 
@@ -512,9 +540,8 @@ namespace SrtStudio
                 Point point = e.GetPosition(chunk);
 
                 Cursor cursor = Cursors.Arrow;
-                if (point.Y >= 0 && point.Y <= chunk.ActualHeight) {
-                    if ((point.X >= 0 && point.X <= dragSize) ||
-                        (point.X >= chunk.Width - dragSize && point.X <= chunk.ActualWidth)) {
+                if (IsCursorVerticallyInChunkBounds(point, chunk)) {
+                    if (IsCursorHorizontallyAtStartBorder(point) || IsCursorHorizontallyAtEndBorder(point, chunk)) {
                         cursor = Cursors.SizeWE;
                     }
                 }
@@ -542,22 +569,31 @@ namespace SrtStudio
 
         Point startPoint;
 
+        bool IsCursorVerticallyInChunkBounds(Point cursorPos, Chunk chunk) {
+            return cursorPos.Y >= 0 && cursorPos.Y <= chunk.ActualHeight;
+        }
+
+        bool IsCursorHorizontallyAtStartBorder(Point cursorPos) {
+            return cursorPos.X >= 0 && cursorPos.X <= dragSize;
+        }
+
+        bool IsCursorHorizontallyAtEndBorder(Point cursorPos, Chunk chunk) {
+            return cursorPos.X >= chunk.ActualWidth - dragSize && cursorPos.X <= chunk.ActualWidth;
+        }
+
         private void Chunk_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             Chunk chunk = (Chunk)sender;
             if (!chunk.Locked) {
                 Point pointc = e.GetPosition(chunk);
                 startPoint = e.GetPosition(stackMeta);
-
-                //is cursor vertically in chunk bounds
-                if (pointc.Y >= 0 && pointc.Y <= chunk.ActualHeight) {
-                    //isMouseAtStartBorder
-                    if ((pointc.X >= 0 && pointc.X <= dragSize)) {
+                                
+                if (IsCursorVerticallyInChunkBounds(pointc, chunk)) {
+                    if (IsCursorHorizontallyAtStartBorder(pointc)) {
                         draggingPoint = DraggingPoint.Start;
                         draggedChunk = chunk;
                         Mouse.Capture(chunk);
                     }
-                    //EndBorder
-                    else if (pointc.X >= chunk.ActualWidth - dragSize && pointc.X <= chunk.ActualWidth) {
+                    else if (IsCursorHorizontallyAtEndBorder(pointc, chunk)) {
                         draggingPoint = DraggingPoint.End;
                         draggedChunk = chunk;
                         Mouse.Capture(chunk);
