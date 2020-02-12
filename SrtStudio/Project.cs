@@ -50,7 +50,7 @@ namespace SrtStudio
                     mainWindow.timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
                     mainWindow.Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
 
-                    mainWindow.timeline.stack.MinWidth = mainWindow.player.Duration.TotalSeconds / mainWindow.timeline.timescale * mainWindow.timeline.pixelscale;
+                    mainWindow.timeline.stack.MinWidth = mainWindow.player.Duration.TotalSeconds / mainWindow.timeline.Timescale * mainWindow.timeline.Pixelscale;
 
                 });
             });

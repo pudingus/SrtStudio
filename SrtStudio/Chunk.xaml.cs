@@ -75,9 +75,9 @@ namespace SrtStudio
         }
 
         public void Update() {
-            double margin = Item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
+            double margin = Item.Start.TotalSeconds / _parent.Timescale * _parent.Pixelscale;
             Margin = new Thickness(margin, 0, 0, 0);
-            double width = Item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
+            double width = Item.Dur.TotalSeconds / _parent.Timescale * _parent.Pixelscale;
             Width = width;
         }
 

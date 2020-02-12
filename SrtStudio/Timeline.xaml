@@ -27,7 +27,7 @@
 
                 <ScrollViewer Grid.Column="1" x:Name="svHor" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,18" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
                     <Grid>
-                        <Rectangle x:Name="seekbar" Height="20" Cursor="ScrollWE" VerticalAlignment="Top" HorizontalAlignment="Stretch" MouseLeftButtonDown="seekbar_MouseLeftButtonDown" MouseLeftButtonUp="seekbar_MouseLeftButtonUp" MouseMove="seekbar_MouseMove">
+                        <Rectangle x:Name="seekbar" Height="20" Cursor="ScrollWE" VerticalAlignment="Top" HorizontalAlignment="Stretch" MouseLeftButtonDown="Seekbar_MouseLeftButtonDown" MouseLeftButtonUp="Seekbar_MouseLeftButtonUp" MouseMove="Seekbar_MouseMove">
                             <Rectangle.Fill>
                                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                     <GradientStop Color="#FF212121" Offset="0"/>

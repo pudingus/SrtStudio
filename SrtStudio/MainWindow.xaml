@@ -32,7 +32,7 @@
                         <xcad:LayoutPanel Orientation="Vertical" DockWidth="430">
                             <xcad:LayoutAnchorablePane>
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="listView_SelectionChanged" MouseDoubleClick="listView_MouseDoubleClick" TextInput="ListView_TextInput">
+                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="ListView_SelectionChanged" MouseDoubleClick="ListView_MouseDoubleClick" TextInput="ListView_TextInput">
                                         <ListView.Resources>
 
                                         </ListView.Resources>
@@ -168,20 +168,20 @@
         </xcad:DockingManager>
         <Menu Height="25" VerticalAlignment="Top" Background="#FF343434">
             <MenuItem Header="Project" Foreground="White">
-                <MenuItem x:Name="menuProjectNew" Header="New" InputGestureText="Ctrl+N" Foreground="Black" Click="menuProjectNew_Click"/>
-                <MenuItem x:Name="menuProjectOpen" Header="Open..." InputGestureText="Ctrl+O" Foreground="Black" Click="menuProjectOpen_Click"/>
-                <MenuItem x:Name="menuProjectSave" Header="Save" InputGestureText="Ctrl+S" Foreground="Black" Click="menuProjectSave_Click"/>
-                <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Foreground="Black" Click="menuProjectSaveAs_Click" />
-                <MenuItem x:Name="menuProjectClose" Header="Close" Foreground="Black" Click="menuProjectClose_Click"/>
+                <MenuItem x:Name="menuProjectNew" Header="New" InputGestureText="Ctrl+N" Foreground="Black" Click="MenuProjectNew_Click"/>
+                <MenuItem x:Name="menuProjectOpen" Header="Open..." InputGestureText="Ctrl+O" Foreground="Black" Click="MenuProjectOpen_Click"/>
+                <MenuItem x:Name="menuProjectSave" Header="Save" InputGestureText="Ctrl+S" Foreground="Black" Click="MenuProjectSave_Click"/>
+                <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Foreground="Black" Click="MenuProjectSaveAs_Click" />
+                <MenuItem x:Name="menuProjectClose" Header="Close" Foreground="Black" Click="MenuProjectClose_Click"/>
             </MenuItem>
             <MenuItem Header="Video" Foreground="White">
-                <MenuItem x:Name="menuVideoOpen" Header="Open..." Foreground="Black" Click="menuVideoOpen_Click"/>
-                <MenuItem x:Name="menuVideoClose" Header="Close" Foreground="Black" Click="menuVideoClose_Click"/>
+                <MenuItem x:Name="menuVideoOpen" Header="Open..." Foreground="Black" Click="MenuVideoOpen_Click"/>
+                <MenuItem x:Name="menuVideoClose" Header="Close" Foreground="Black" Click="MenuVideoClose_Click"/>
             </MenuItem>
             <MenuItem Header="Srt" Foreground="White">
-                <MenuItem x:Name="menuSrtImport" Header="Import..." Foreground="Black" Click="menuSrtImport_Click"/>
-                <MenuItem x:Name="menuSrtRefImport" Header="Import reference..." Foreground="Black" Click="menuSrtRefImport_Click"/>
-                <MenuItem x:Name="menuSrtExport" Header="Export..." Foreground="Black" Click="menuSrtExport_Click"/>
+                <MenuItem x:Name="menuSrtImport" Header="Import..." Foreground="Black" Click="MenuSrtImport_Click"/>
+                <MenuItem x:Name="menuSrtRefImport" Header="Import reference..." Foreground="Black" Click="MenuSrtRefImport_Click"/>
+                <MenuItem x:Name="menuSrtExport" Header="Export..." Foreground="Black" Click="MenuSrtExport_Click"/>
             </MenuItem>
             <MenuItem Header="Edit" Foreground="White">
                 <MenuItem x:Name="menuEditInsert" Header="Insert" InputGestureText="F2" Foreground="Black" Click="MenuEditInsert_Click"/>
