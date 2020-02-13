@@ -65,7 +65,6 @@ namespace SrtStudio
                 return false;
             }
 
-            mainWindow.SuperList.Clear();
             mainWindow.player.Stop();
             mainWindow.player.PlaylistClear();
             mainWindow.timeline.ClearTracks();

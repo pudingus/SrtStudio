@@ -17,12 +17,12 @@ namespace SrtStudio
     {
         public bool Locked { get; set; }
 
-        public List<Item> Streamed;
+        public List<Item> StreamedItems { get; } = new List<Item>();
         /// <summary>
         /// All items in the track?
         /// </summary>
-        public ObservableCollection<Item> Super;
-
+        public ObservableCollection<Item> Super { get; } = new ObservableCollection<Item>();
+        
 
         public string Name {
             get => TrackHeader.trackName.Text;
@@ -52,7 +52,6 @@ namespace SrtStudio
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Stretch
             };
-            //TrackLine.itemsControl.ItemsSource = TrackLine.ChunksSuper;
         }
     }
 }

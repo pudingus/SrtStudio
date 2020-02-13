@@ -32,7 +32,7 @@
                         <xcad:LayoutPanel Orientation="Vertical" DockWidth="430">
                             <xcad:LayoutAnchorablePane>
                                 <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" ItemsSource="{Binding SuperList}" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="ListView_SelectionChanged" MouseDoubleClick="ListView_MouseDoubleClick" TextInput="ListView_TextInput">
+                                    <ListView x:Name="listView" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="ListView_SelectionChanged" MouseDoubleClick="ListView_MouseDoubleClick" TextInput="ListView_TextInput">
                                         <ListView.Resources>
 
                                         </ListView.Resources>

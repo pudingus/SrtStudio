@@ -47,11 +47,6 @@ namespace SrtStudio
 
             Item.PropertyChanged += Item_PropertyChanged;
             DataContext = Item;
-
-            //double margin = Item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
-            //Margin = new Thickness(margin, 0, 0, 0);
-            //double width = Item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
-            //Width = width;
             Update();
         }
 

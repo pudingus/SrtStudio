@@ -51,7 +51,7 @@ namespace SrtStudio
                 return _tracks.AsReadOnly();
             }
         }
-
+        
         public TimeSpan Position {
             get {
                 double start = needle.Margin.Left / Pixelscale * Timescale;
@@ -59,7 +59,7 @@ namespace SrtStudio
             }
             set {
                 double margin = value.TotalSeconds / Timescale * Pixelscale;
-                needle.Margin = new Thickness(margin, 0, 0, 0);
+                needle.Margin = new Thickness(margin, 0, 0, 0);         
             }
         }
 
@@ -597,7 +597,7 @@ namespace SrtStudio
 
         #region Helper Methods
         void UpdateStreamedChunks(Track track) {
-            foreach (Item item in track.Streamed) {
+            foreach (Item item in track.StreamedItems) {
                 item.Chunk.Update();
             }
         }
@@ -605,8 +605,8 @@ namespace SrtStudio
 
             foreach (Item item in track.Super) {
                 if (item.Start <= scrollHorizonRight && item.End >= scrollHorizonLeft) {
-                    if (!track.Streamed.Contains(item)) {
-                        track.Streamed.Add(item);
+                    if (!track.StreamedItems.Contains(item)) {
+                        track.StreamedItems.Add(item);
                         Chunk chunk = new Chunk(this, item) {
                             ContextMenu = ChunkContextMenu
                         };
@@ -616,7 +616,7 @@ namespace SrtStudio
                     }
                 }
                 else {
-                    track.Streamed.Remove(item);
+                    track.StreamedItems.Remove(item);
                     RemoveChunkFromTrack(item.Chunk, track);
                 }
             }
