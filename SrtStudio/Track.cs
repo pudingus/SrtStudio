@@ -25,8 +25,8 @@ namespace SrtStudio
 
 
         public string Name {
-            get => TrackMeta.trackName.Text;
-            set => TrackMeta.trackName.Text = value;
+            get => TrackHeader.trackName.Text;
+            set => TrackHeader.trackName.Text = value;
         }
 
         private double _height = 100;
@@ -34,17 +34,17 @@ namespace SrtStudio
             get => _height;
             set {
                 _height = value;
-                TrackMeta.Height = _height;
+                TrackHeader.Height = _height;
                 TrackLine.Height = _height;
             }
         }
 
-        public TrackMeta TrackMeta { get; set; }
+        public TrackHeader TrackHeader { get; set; }
         public Grid TrackLine { get; set; }
 
         public Track()
         {
-            TrackMeta = new TrackMeta(this) {
+            TrackHeader = new TrackHeader(this) {
                 Height = _height
             };
             TrackLine = new Grid {

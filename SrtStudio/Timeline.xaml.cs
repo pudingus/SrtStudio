@@ -66,7 +66,7 @@ namespace SrtStudio
         public ContextMenu ChunkContextMenu { get; set; }
         public event ContextMenuEventHandler ChunkContextMenuOpening;
 
-        TrackMeta draggedMeta;
+        TrackHeader draggedHeader;
         const int DRAG_SIZE = 10;
         Point point;
         readonly DispatcherTimer clickTimer = new DispatcherTimer();
@@ -97,19 +97,19 @@ namespace SrtStudio
         }
 
         public void AddTrack(Track track, bool toBottom = false) {
-            track.TrackMeta.MouseMove += TrackMeta_MouseMove;
-            track.TrackMeta.MouseLeftButtonDown += TrackMeta_MouseLeftButtonDown;
-            track.TrackMeta.MouseLeftButtonUp += TrackMeta_MouseLeftButtonUp;
-            track.TrackMeta.MouseLeave += TrackMeta_MouseLeave;
+            track.TrackHeader.MouseMove += TrackHeader_MouseMove;
+            track.TrackHeader.MouseLeftButtonDown += TrackHeader_MouseLeftButtonDown;
+            track.TrackHeader.MouseLeftButtonUp += TrackHeader_MouseLeftButtonUp;
+            track.TrackHeader.MouseLeave += TrackHeader_MouseLeave;
 
 
             if (toBottom) {
                 stack.Children.Add(track.TrackLine);
-                stackMeta.Children.Add(track.TrackMeta);
+                headerStack.Children.Add(track.TrackHeader);
             }
             else {
                 stack.Children.Insert(0, track.TrackLine);
-                stackMeta.Children.Insert(0, track.TrackMeta);
+                headerStack.Children.Insert(0, track.TrackHeader);
             }
 
             _tracks.Add(track);
@@ -117,14 +117,14 @@ namespace SrtStudio
 
         public void RemoveTrack(Track track) {
             stack.Children.Remove(track.TrackLine);
-            stackMeta.Children.Remove(track.TrackMeta);
+            headerStack.Children.Remove(track.TrackHeader);
 
             _tracks.Remove(track);
         }
 
         public void ClearTracks() {
             stack.Children.Clear();
-            stackMeta.Children.Clear();
+            headerStack.Children.Clear();
         }
 
         public void AddChunkToTrack(Chunk chunk, Track track) {
@@ -179,55 +179,51 @@ namespace SrtStudio
 
         
 
-        void TrackMeta_MouseMove(object sender, MouseEventArgs e) {
-            TrackMeta trackMeta = sender as TrackMeta;
-            Point pointe = e.GetPosition(trackMeta);
+        void TrackHeader_MouseMove(object sender, MouseEventArgs e) {
+            TrackHeader trackHeader = sender as TrackHeader;
+            Point pointe = e.GetPosition(trackHeader);
 
             Cursor cursor = Cursors.Arrow;
-            if (IsCursorAtMetaResizeBorder(pointe, trackMeta)) {
+            if (IsCursorAtHeaderResizeBorder(pointe, trackHeader)) {
                 cursor = Cursors.SizeNS;
             }
            
             Cursor = cursor;
         }
 
-        void TrackMeta_MouseLeave(object sender, MouseEventArgs e) {
+        void TrackHeader_MouseLeave(object sender, MouseEventArgs e) {
             Cursor = Cursors.Arrow;
         }
 
-        void TrackMeta_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            TrackMeta trackMeta = sender as TrackMeta;
-            Point pointe = e.GetPosition(trackMeta);
+        void TrackHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            TrackHeader trackHeader = sender as TrackHeader;
+            Point pointe = e.GetPosition(trackHeader);
 
-            if (IsCursorAtMetaResizeBorder(pointe, trackMeta)) {
-                draggedMeta = trackMeta;
-                Mouse.Capture(trackMeta);
+            if (IsCursorAtHeaderResizeBorder(pointe, trackHeader)) {
+                draggedHeader = trackHeader;
+                Mouse.Capture(trackHeader);
             }            
         }
 
-        void TrackMeta_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            //if (draggedMeta != null) {
-            //    draggedMeta.ParentTrack.TrackLine.Height = draggedMeta.ActualHeight;
-           // }
-
-            draggedMeta = null;
+        void TrackHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            draggedHeader = null;
             Mouse.Capture(null);
         }
 
         void UserControl_PreviewMouseMove(object sender, MouseEventArgs e) {
             double deltax = point.X;
             double deltay = point.Y;
-            point = e.GetPosition(stackMeta);
+            point = e.GetPosition(headerStack);
             deltax -= point.X;
             deltay -= point.Y;
             //Console.WriteLine(point);
 
 
-            TrackMeta trackMeta = draggedMeta;
+            TrackHeader trackHeader = draggedHeader;
 
-            if (trackMeta != null) {
-                trackMeta.Height -= deltay;
-                draggedMeta.ParentTrack.TrackLine.Height = draggedMeta.ActualHeight;
+            if (trackHeader != null) {
+                trackHeader.Height -= deltay;
+                draggedHeader.ParentTrack.TrackLine.Height = draggedHeader.ActualHeight;
 
             }
 
@@ -342,7 +338,7 @@ namespace SrtStudio
                 if (pointscr.Y < 0) {
 
 
-                    if (point.X > stackMeta.ActualWidth) {
+                    if (point.X > headerStack.ActualWidth) {
                         needle.Margin = new Thickness(pointe.X, 0, 0, 0);
                         NeedleMoved?.Invoke(this);
                         Debug.WriteLine("DIS!");
@@ -519,7 +515,7 @@ namespace SrtStudio
             var chunk = (Chunk)sender;
             if (!chunk.Locked) {
                 Point pointc = e.GetPosition(chunk);
-                startPoint = e.GetPosition(stackMeta);
+                startPoint = e.GetPosition(headerStack);
                                 
                 if (IsCursorVerticallyInChunkBounds(pointc, chunk)) {
                     if (IsCursorHorizontallyAtStartBorder(pointc)) {
@@ -531,7 +527,7 @@ namespace SrtStudio
                         draggingPoint = DraggingPoint.End;
                         draggedChunk = chunk;
                         Mouse.Capture(chunk);
-                        startPoint = e.GetPosition(stackMeta);
+                        startPoint = e.GetPosition(headerStack);
 
                     }
                     //Middle
@@ -627,17 +623,17 @@ namespace SrtStudio
         }
 
 
-        bool IsCursorHorizontallyInMetaBounds(Point cursorPos, TrackMeta trackMeta) {
-            return cursorPos.X >= 0 && cursorPos.X <= trackMeta.ActualWidth;
+        bool IsCursorHorizontallyInHeaderBounds(Point cursorPos, TrackHeader trackHeader) {
+            return cursorPos.X >= 0 && cursorPos.X <= trackHeader.ActualWidth;
         }
 
-        bool IsCursorVerticallyAtMetaResizeBorder(Point cursorPos, TrackMeta trackMeta) {
-            return cursorPos.Y >= trackMeta.ActualHeight - DRAG_SIZE && cursorPos.Y <= trackMeta.ActualHeight;
+        bool IsCursorVerticallyAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader) {
+            return cursorPos.Y >= trackHeader.ActualHeight - DRAG_SIZE && cursorPos.Y <= trackHeader.ActualHeight;
         }
 
-        bool IsCursorAtMetaResizeBorder(Point cursorPos, TrackMeta trackMeta) {
-            return IsCursorHorizontallyInMetaBounds(cursorPos, trackMeta) &&
-                IsCursorVerticallyAtMetaResizeBorder(cursorPos, trackMeta);
+        bool IsCursorAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader) {
+            return IsCursorHorizontallyInHeaderBounds(cursorPos, trackHeader) &&
+                IsCursorVerticallyAtHeaderResizeBorder(cursorPos, trackHeader);
         }
 
 

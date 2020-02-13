@@ -16,18 +16,18 @@ using System.Windows.Shapes;
 namespace SrtStudio
 {
     /// <summary>
-    /// Interaction logic for TrackMeta.xaml
+    /// Interaction logic for TrackHeader.xaml
     /// </summary>
-    public partial class TrackMeta : UserControl
+    public partial class TrackHeader : UserControl
     {
         public Track ParentTrack { get; set; }
 
-        public TrackMeta()
+        public TrackHeader()
         {
             InitializeComponent();
         }
 
-        public TrackMeta(Track parent)
+        public TrackHeader(Track parent)
         {
             InitializeComponent();
             ParentTrack = parent;

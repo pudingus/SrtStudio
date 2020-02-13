@@ -22,7 +22,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" x:Name="stackMeta" Margin="0,20,0,0">
+                <StackPanel Grid.Column="0" x:Name="headerStack" Margin="0,20,0,0">
                 </StackPanel>
 
                 <ScrollViewer Grid.Column="1" x:Name="svHor" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,18" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
