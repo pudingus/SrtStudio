@@ -25,6 +25,7 @@ using System.Windows.Markup;
 using System.Globalization;
 
 using static SrtStudio.StringOperations;
+using Path = System.IO.Path;
 
 namespace SrtStudio {
     /// <summary>
@@ -51,7 +52,6 @@ namespace SrtStudio {
         Track editTrack;
         Track refTrack;
 
-        string _currentFile = "";
         readonly DispatcherTimer bakTimer = new DispatcherTimer() {
             Interval = TimeSpan.FromSeconds(10)
         };
@@ -68,7 +68,7 @@ namespace SrtStudio {
             InitPlayer();
 
 
-            UpdateTitle("Untitled");
+            UpdateTitle();
 
             Settings.Load();
             if (Settings.Data.Maximized) {
@@ -93,7 +93,7 @@ namespace SrtStudio {
 
         public void LoadSubtitles(List<Subtitle> subtitles, string trackName) {
             if (editTrack != null) {
-                editTrack.Super.Clear();
+                editTrack.Items.Clear();
                 timeline.RemoveTrack(editTrack);
             }
 
@@ -106,14 +106,15 @@ namespace SrtStudio {
             timeline.AddTrack(track, true);
 
             CreateItemsFromSubs(subtitles, track);
+            
+            //assign items to listview
+            listView.ItemsSource = editTrack.Items;
 
-            Item lastItem = editTrack.Super[editTrack.Super.Count-1];
+            //ensure minimal width of the timeline
+            Item lastItem = editTrack.Items[editTrack.Items.Count-1];
             double margin = lastItem.Start.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
             double width = lastItem.Dur.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
-
             timeline.seekbar.MinWidth = margin + width;
-
-            listView.ItemsSource = editTrack.Super;
         }
 
         public void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
@@ -158,7 +159,7 @@ namespace SrtStudio {
 
             string text = "";
 
-            foreach (Item item in editTrack.Super) {
+            foreach (Item item in editTrack.Items) {
                 if (position >= item.Start && position <= item.End) {
                     if (player.IsPlaying) {
                         listView.SelectionMode = SelectionMode.Single;
@@ -187,17 +188,17 @@ namespace SrtStudio {
             Seek(newPos);
         }
 
-        public void UpdateTitle(string currentFile) {
-            _currentFile = currentFile;
+        public void UpdateTitle() {
+            string currentFile = Path.GetFileName(Project.FileName);
             string star = "";
             if (Project.UnsavedChanges) star = "*";
             int index = 0;
             int count = 0;
             double perc = 0.0;
 
-            if (editTrack != null && editTrack.Super.Count > 0 && listView.SelectedIndex != -1) {
+            if (editTrack != null && editTrack.Items.Count > 0 && listView.SelectedIndex != -1) {
                 index = listView.SelectedIndex + 1;
-                count = editTrack.Super.Count;
+                count = editTrack.Items.Count;
                 perc = (double)index / count * 100;
             }
 
@@ -215,7 +216,7 @@ namespace SrtStudio {
                 Item item = new Item(sub) {
                     Index = i
                 };
-                track.Super.Add(item);
+                track.Items.Add(item);
             }
         }
 
@@ -287,14 +288,14 @@ namespace SrtStudio {
         }        
 
         void RecalculateIndexes() {
-            foreach (Item item in editTrack.Super) {
-                item.Index = editTrack.Super.IndexOf(item) + 1;
+            foreach (Item item in editTrack.Items) {
+                item.Index = editTrack.Items.IndexOf(item) + 1;
             }
         }
 
         List<Item> SortAscendingByIndex(IList items) {
             var sl = new List<Item>();
-            foreach (Item item in editTrack.Super)
+            foreach (Item item in editTrack.Items)
                 if (items.Contains(item)) sl.Add(item);
             return sl;
         }
@@ -315,7 +316,7 @@ namespace SrtStudio {
                     else
                         item.Text = "-" + item.Text + Environment.NewLine + "-" + nextItem.Text;
 
-                    editTrack.Super.Remove(nextItem);
+                    editTrack.Items.Remove(nextItem);
                     Project.Data.Subtitles.Remove(nextItem.Sub);
 
                     timeline.RemoveChunkFromTrack(nextItem.Chunk, editTrack);
@@ -363,7 +364,7 @@ namespace SrtStudio {
 
         void Timeline_ChunkUpdated(object sender, Chunk chunk) {
             Project.SignalChange();
-            UpdateTitle(_currentFile);
+            UpdateTitle();
         }
 
         void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
@@ -383,7 +384,7 @@ namespace SrtStudio {
 
         void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             UpdateTimelineSelection(e.RemovedItems, e.AddedItems);
-            UpdateTitle(_currentFile);
+            UpdateTitle();
         }
 
         void UpdateTimelineSelection(IList removedItems, IList addedItems) {
@@ -440,7 +441,7 @@ namespace SrtStudio {
                 overlaySubs.Text = item.Text;
             }
             Project.SignalChange();
-            UpdateTitle(_currentFile);
+            UpdateTitle();
         }
 
         void TextBox_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e) {
@@ -481,6 +482,7 @@ namespace SrtStudio {
         #region Menu Events
         void MenuProjectNew_Click(object sender, RoutedEventArgs e) {
             Project.Close();
+            editTrack.Items.Clear();
         }
 
         void MenuProjectOpen_Click(object sender, RoutedEventArgs e) {
@@ -502,7 +504,7 @@ namespace SrtStudio {
                 };
                 if (dialog.ShowDialog() == true) {
                     Project.Write(dialog.FileName);
-                    UpdateTitle(dialog.SafeFileName);
+                    UpdateTitle();
                 }
             }
             else {
@@ -510,7 +512,7 @@ namespace SrtStudio {
                 Project.Data.VideoPos = player.Position.TotalSeconds;
                 Project.Data.ScrollPos = timeline.svHor.HorizontalOffset;
                 Project.Write(Project.FileName);
-                UpdateTitle(_currentFile);
+                UpdateTitle();
             }
         }
 
@@ -522,12 +524,13 @@ namespace SrtStudio {
             };
             if (dialog.ShowDialog() == true) {
                 Project.Write(dialog.FileName);
-                UpdateTitle(dialog.SafeFileName);
+                UpdateTitle();
             }
         }
 
         void MenuProjectClose_Click(object sender, RoutedEventArgs e) {
             Project.Close();
+            editTrack.Items.Clear();
         }
 
         void MenuVideoOpen_Click(object sender, RoutedEventArgs e) {
@@ -745,9 +748,9 @@ namespace SrtStudio {
 
         void Action_InsertNewSubtitle() {
             Item beforeNeedle = null;
-            for (int index = editTrack.Super.Count - 1; index >= 0; --index) {
-                if (player.Position >= editTrack.Super[index].Start) {
-                    beforeNeedle = editTrack.Super[index];
+            for (int index = editTrack.Items.Count - 1; index >= 0; --index) {
+                if (player.Position >= editTrack.Items[index].Start) {
+                    beforeNeedle = editTrack.Items[index];
                     break;
                 }
             }
@@ -755,12 +758,12 @@ namespace SrtStudio {
                 var sub = new Subtitle() {
                     Start = player.Position,
                     End = player.Position + TimeSpan.FromSeconds(1.5),
-                    Text = ""
+                    Text = string.Empty
                 };
                 Project.Data.Subtitles.Insert(beforeNeedle.Index, sub);
 
                 var item = new Item(sub);
-                editTrack.Super.Insert(beforeNeedle.Index, item);
+                editTrack.Items.Insert(beforeNeedle.Index, item);
                 editTrack.StreamedItems.Add(item);
                 RecalculateIndexes();
 
@@ -800,10 +803,10 @@ namespace SrtStudio {
             foreach (Item item in listView.SelectedItems) copy.Add(item);
 
             foreach (Item item in copy) {
-                editTrack.Super.Remove(item);
+                editTrack.Items.Remove(item);
                 Project.Data.Subtitles.Remove(item.Sub);
                 timeline.RemoveChunkFromTrack(item.Chunk, editTrack);
-                editTrack.Super.Remove(item);
+                editTrack.Items.Remove(item);
             }
             RecalculateIndexes();
             Project.SignalChange();

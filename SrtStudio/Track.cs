@@ -18,10 +18,8 @@ namespace SrtStudio
         public bool Locked { get; set; }
 
         public List<Item> StreamedItems { get; } = new List<Item>();
-        /// <summary>
-        /// All items in the track?
-        /// </summary>
-        public ObservableCollection<Item> Super { get; } = new ObservableCollection<Item>();
+        
+        public ObservableCollection<Item> Items { get; } = new ObservableCollection<Item>();
                 
         public Item ItemUnderNeedle { get; set; }
 

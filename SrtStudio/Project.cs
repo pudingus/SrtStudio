@@ -26,7 +26,10 @@ namespace SrtStudio
 
     public static class Project
     {
-        public static string FileName { get; private set; }
+        /// <summary>
+        /// Full path
+        /// </summary>
+        public static string FileName { get; private set; } = "Untitled";
         public static ProjectStorage Data { get; set; } = new ProjectStorage();
         public static bool UnsavedChanges { get; private set; }
         public static bool UnwrittenChanges { get; private set; }        
@@ -35,7 +38,7 @@ namespace SrtStudio
             var mainWindow = MainWindow.Instance;
 
             Project.Read(filename, asBackup);
-            mainWindow.UpdateTitle(Path.GetFileName(filename));
+            mainWindow.UpdateTitle();
             if (!string.IsNullOrEmpty(Project.Data.VideoPath))
                 mainWindow.player.Load(Project.Data.VideoPath);
 
@@ -70,7 +73,8 @@ namespace SrtStudio
             mainWindow.timeline.ClearTracks();
             Project.Data.Subtitles = null;
             Project.Data.RefSubtitles = null;
-            mainWindow.UpdateTitle("Untitled");
+            Project.FileName = "Untitled closed";
+            mainWindow.UpdateTitle();
             return true;
         }
 

@@ -63,7 +63,7 @@ namespace SrtStudio
 
                 var position = value;
                 foreach (Track track in _tracks) {                    
-                    foreach (Item item in track.Super) {
+                    foreach (Item item in track.Items) {
                         if (position >= item.Start && position <= item.End) {
                             track.ItemUnderNeedle = item;
                             break;
@@ -286,8 +286,8 @@ namespace SrtStudio
                         }
                         else {
                             //loop from selected item forward
-                            for (int i = draggedChunk.Item.Index-1; i < draggedChunk.ParentTrack.Super.Count; i++) {
-                                Item item = draggedChunk.ParentTrack.Super[i];
+                            for (int i = draggedChunk.Item.Index-1; i < draggedChunk.ParentTrack.Items.Count; i++) {
+                                Item item = draggedChunk.ParentTrack.Items[i];
                                 TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / Pixelscale * Timescale);
                                 item.Start -= timeDelta;
                                 item.End -= timeDelta;
@@ -613,7 +613,7 @@ namespace SrtStudio
         }
         void RecalculateStreamedSet(Track track) {
 
-            foreach (Item item in track.Super) {
+            foreach (Item item in track.Items) {
                 if (item.Start <= scrollHorizonRight && item.End >= scrollHorizonLeft) {
                     if (!track.StreamedItems.Contains(item)) {
                         track.StreamedItems.Add(item);
