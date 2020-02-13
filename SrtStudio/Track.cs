@@ -22,7 +22,7 @@ namespace SrtStudio
         /// All items in the track?
         /// </summary>
         public ObservableCollection<Item> Super { get; } = new ObservableCollection<Item>();
-
+                
         public Item ItemUnderNeedle { get; set; }
 
 
@@ -37,19 +37,19 @@ namespace SrtStudio
             set {
                 _height = value;
                 TrackHeader.Height = _height;
-                TrackLine.Height = _height;
+                TrackContent.Height = _height;
             }
         }
 
-        public TrackHeader TrackHeader { get; set; }
-        public Grid TrackLine { get; set; }
+        public TrackHeader TrackHeader { get; }
+        public Grid TrackContent { get; }
 
         public Track()
         {
             TrackHeader = new TrackHeader(this) {
                 Height = _height
             };
-            TrackLine = new Grid {
+            TrackContent = new Grid {
                 Height = _height,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Stretch

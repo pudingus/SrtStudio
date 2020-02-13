@@ -37,7 +37,7 @@
                         </Rectangle>
 
                         <!--track stack-->
-                        <StackPanel Margin="0,20,0,0" x:Name="stack" >
+                        <StackPanel Margin="0,20,0,0" x:Name="contentStack" >
                         </StackPanel>
                         <Rectangle x:Name="needle" x:FieldModifier="private" Fill="White" Width="1" Margin="30,0,0,0" IsHitTestVisible="False" VerticalAlignment="Stretch" HorizontalAlignment="Left"></Rectangle>
 

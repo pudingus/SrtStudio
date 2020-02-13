@@ -114,11 +114,11 @@ namespace SrtStudio
 
 
             if (toBottom) {
-                stack.Children.Add(track.TrackLine);
+                contentStack.Children.Add(track.TrackContent);
                 headerStack.Children.Add(track.TrackHeader);
             }
             else {
-                stack.Children.Insert(0, track.TrackLine);
+                contentStack.Children.Insert(0, track.TrackContent);
                 headerStack.Children.Insert(0, track.TrackHeader);
             }
 
@@ -126,14 +126,14 @@ namespace SrtStudio
         }
 
         public void RemoveTrack(Track track) {
-            stack.Children.Remove(track.TrackLine);
+            contentStack.Children.Remove(track.TrackContent);
             headerStack.Children.Remove(track.TrackHeader);
 
             _tracks.Remove(track);
         }
 
         public void ClearTracks() {
-            stack.Children.Clear();
+            contentStack.Children.Clear();
             headerStack.Children.Clear();
         }
 
@@ -152,12 +152,12 @@ namespace SrtStudio
                 chunk.backRect.Fill = (Brush)bc.ConvertFrom("#FF3C3C3C");
             }
 
-            track.TrackLine.Children.Add(chunk);
+            track.TrackContent.Children.Add(chunk);
             chunk.ParentTrack = track;
         }
 
         public void RemoveChunkFromTrack(Chunk chunk, Track track) {
-            track.TrackLine.Children.Remove(chunk);
+            track.TrackContent.Children.Remove(chunk);
         }
 
         public void DeselectAll() {
@@ -233,7 +233,7 @@ namespace SrtStudio
 
             if (trackHeader != null) {
                 trackHeader.Height -= deltay;
-                draggedHeader.ParentTrack.TrackLine.Height = draggedHeader.ActualHeight;
+                draggedHeader.ParentTrack.TrackContent.Height = draggedHeader.ActualHeight;
 
             }
 
@@ -327,7 +327,7 @@ namespace SrtStudio
                     NeedleMoved?.Invoke(this);
                 }
                 else {
-                    Point pointe = e.GetPosition(stack);
+                    Point pointe = e.GetPosition(contentStack);
                     needle.Margin = new Thickness(pointe.X, 0, 0, 0);
                     NeedleMoved?.Invoke(this);
                 }
@@ -335,7 +335,7 @@ namespace SrtStudio
 
             }
             if (!afterPoint && draggedChunk == null) {
-                Point pointe = e.GetPosition(stack);
+                Point pointe = e.GetPosition(contentStack);
 
                 Point pointscr = e.GetPosition(scrollbar);
 
@@ -444,7 +444,7 @@ namespace SrtStudio
         
         void Seekbar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
 
-            Point pointe = e.GetPosition(stack);
+            Point pointe = e.GetPosition(contentStack);
             needle.Margin = new Thickness(pointe.X, 0, 0, 0);
             NeedleMoved?.Invoke(this);
             seekbarDown = true;
@@ -460,7 +460,7 @@ namespace SrtStudio
 
         void Seekbar_MouseMove(object sender, MouseEventArgs e) {
             if (seekbarDown) {
-                Point pointe = e.GetPosition(stack);
+                Point pointe = e.GetPosition(contentStack);
                 needle.Margin = new Thickness(pointe.X, 0, 0, 0);
                 NeedleMoved?.Invoke(this);
             }
