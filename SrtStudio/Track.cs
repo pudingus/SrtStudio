@@ -22,7 +22,9 @@ namespace SrtStudio
         /// All items in the track?
         /// </summary>
         public ObservableCollection<Item> Super { get; } = new ObservableCollection<Item>();
-        
+
+        public Item ItemUnderNeedle { get; set; }
+
 
         public string Name {
             get => TrackHeader.trackName.Text;

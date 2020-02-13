@@ -25,7 +25,6 @@ using System.Windows.Markup;
 using System.Globalization;
 
 using static SrtStudio.StringOperations;
-using Path = System.IO.Path;
 
 namespace SrtStudio {
     /// <summary>
@@ -58,9 +57,6 @@ namespace SrtStudio {
         };
 
         TextBox activeTextBox;
-
-        Item underNeedle;
-
 
         #region Public Methods
         public MainWindow() {
@@ -161,24 +157,22 @@ namespace SrtStudio {
 
 
             string text = "";
-            underNeedle = null;
 
             foreach (Item item in editTrack.Super) {
                 if (position >= item.Start && position <= item.End) {
-                    if (player.IsPlaying && item != underNeedle) {
+                    if (player.IsPlaying) {
                         listView.SelectionMode = SelectionMode.Single;
                         listView.SelectedItem = item;
                         listView.SelectionMode = SelectionMode.Extended;
-
+                        /*
                         Task.Delay(100).ContinueWith(t => {
                             Dispatcher.Invoke(() => {
                                 //listView.ScrollIntoView(item);
-
                             });
                         });
+                        */
                     }
                     text = item.Text;
-                    underNeedle = item;
                     break;
                 }
             }
@@ -442,7 +436,7 @@ namespace SrtStudio {
             var textBox = (TextBox)sender;
             var item = (Item)textBox.DataContext;
             item.Text = textBox.Text;
-            if (item == underNeedle) {
+            if (item == editTrack.ItemUnderNeedle) {
                 overlaySubs.Text = item.Text;
             }
             Project.SignalChange();
@@ -746,7 +740,7 @@ namespace SrtStudio {
         }
 
         void Action_TrimEnd() {
-            Action_TrimEnd(underNeedle);
+            Action_TrimEnd(editTrack.ItemUnderNeedle);
         }
 
         void Action_InsertNewSubtitle() {

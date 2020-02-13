@@ -59,7 +59,17 @@ namespace SrtStudio
             }
             set {
                 double margin = value.TotalSeconds / Timescale * Pixelscale;
-                needle.Margin = new Thickness(margin, 0, 0, 0);         
+                needle.Margin = new Thickness(margin, 0, 0, 0);
+
+                var position = value;
+                foreach (Track track in _tracks) {                    
+                    foreach (Item item in track.Super) {
+                        if (position >= item.Start && position <= item.End) {
+                            track.ItemUnderNeedle = item;
+                            break;
+                        }
+                    }
+                }                
             }
         }
 
