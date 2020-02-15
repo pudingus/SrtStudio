@@ -45,13 +45,9 @@ namespace SrtStudio
 
         public bool Ripple { get; set; }
 
-        readonly List<Track> _tracks = new List<Track>();
-        public IEnumerable<Track> Tracks {
-            get {
-                return _tracks.AsReadOnly();
-            }
-        }
-        
+
+        public ObservableCollection<Track> Tracks { get; } = new ObservableCollection<Track>();
+
         public TimeSpan Position {
             get {
                 double start = needle.Margin.Left / Pixelscale * Timescale;
@@ -62,7 +58,7 @@ namespace SrtStudio
                 needle.Margin = new Thickness(margin, 0, 0, 0);
 
                 var position = value;
-                foreach (Track track in _tracks) {                    
+                foreach (Track track in Tracks) {                    
                     foreach (Item item in track.Items) {
                         if (position >= item.Start && position <= item.End) {
                             track.ItemUnderNeedle = item;
@@ -96,47 +92,47 @@ namespace SrtStudio
 
             SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
 
+            Tracks.CollectionChanged += Tracks_CollectionChanged;
+
             clickTimer.Interval = new TimeSpan(0, 0, 0, 0, 150);
             clickTimer.Tick += ClickTimer_Tick;
 
             ChunkUpdated += Timeline_ChunkUpdated;
         }
 
+        private void Tracks_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
+
+            switch (e.Action) {
+                case NotifyCollectionChangedAction.Reset:
+                    contentStack.Children.Clear();
+                    headerStack.Children.Clear();
+                    break;
+
+                case NotifyCollectionChangedAction.Add:
+                    foreach (Track track in e.NewItems) {
+                        track.TrackHeader.MouseMove += TrackHeader_MouseMove;
+                        track.TrackHeader.MouseLeftButtonDown += TrackHeader_MouseLeftButtonDown;
+                        track.TrackHeader.MouseLeftButtonUp += TrackHeader_MouseLeftButtonUp;
+                        track.TrackHeader.MouseLeave += TrackHeader_MouseLeave;
+
+                        contentStack.Children.Insert(e.NewStartingIndex, track.TrackContent);
+                        headerStack.Children.Insert(e.NewStartingIndex, track.TrackHeader);
+                    }
+                    break;
+
+                case NotifyCollectionChangedAction.Remove:
+                    foreach (Track track in e.OldItems) {
+                        contentStack.Children.Remove(track.TrackContent);
+                        headerStack.Children.Remove(track.TrackHeader);
+                    }
+                    break;
+            }            
+        }
+
         public void RevealNeedle() {
             needle.BringIntoView(new Rect(new Size(50, 50)));
         }
-
-        public void AddTrack(Track track, bool toBottom = false) {
-            track.TrackHeader.MouseMove += TrackHeader_MouseMove;
-            track.TrackHeader.MouseLeftButtonDown += TrackHeader_MouseLeftButtonDown;
-            track.TrackHeader.MouseLeftButtonUp += TrackHeader_MouseLeftButtonUp;
-            track.TrackHeader.MouseLeave += TrackHeader_MouseLeave;
-
-
-            if (toBottom) {
-                contentStack.Children.Add(track.TrackContent);
-                headerStack.Children.Add(track.TrackHeader);
-            }
-            else {
-                contentStack.Children.Insert(0, track.TrackContent);
-                headerStack.Children.Insert(0, track.TrackHeader);
-            }
-
-            _tracks.Add(track);
-        }
-
-        public void RemoveTrack(Track track) {
-            contentStack.Children.Remove(track.TrackContent);
-            headerStack.Children.Remove(track.TrackHeader);
-
-            _tracks.Remove(track);
-        }
-
-        public void ClearTracks() {
-            contentStack.Children.Clear();
-            headerStack.Children.Clear();
-        }
-
+        
         public void AddChunkToTrack(Chunk chunk, Track track) {
             chunk.MouseMove += Chunk_MouseMove;
             chunk.MouseLeftButtonDown += Chunk_MouseLeftButtonDown;

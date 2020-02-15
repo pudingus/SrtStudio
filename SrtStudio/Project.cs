@@ -70,7 +70,7 @@ namespace SrtStudio
 
             mainWindow.player.Stop();
             mainWindow.player.PlaylistClear();
-            mainWindow.timeline.ClearTracks();
+            mainWindow.timeline.Tracks.Clear();
             Project.Data.Subtitles = null;
             Project.Data.RefSubtitles = null;
             Project.FileName = "Untitled closed";

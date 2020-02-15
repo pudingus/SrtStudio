@@ -94,7 +94,7 @@ namespace SrtStudio {
         public void LoadSubtitles(List<Subtitle> subtitles, string trackName) {
             if (editTrack != null) {
                 editTrack.Items.Clear();
-                timeline.RemoveTrack(editTrack);
+                timeline.Tracks.Remove(editTrack);
             }
 
             if (subtitles.Count <= 0) return;
@@ -103,7 +103,7 @@ namespace SrtStudio {
                 Name = trackName
             };
             editTrack = track;
-            timeline.AddTrack(track, true);
+            timeline.Tracks.Add(track);
 
             CreateItemsFromSubs(subtitles, track);
             
@@ -119,7 +119,8 @@ namespace SrtStudio {
 
         public void LoadRefSubtitles(List<Subtitle> subtitles, string trackName) {
             if (refTrack != null)
-                timeline.RemoveTrack(refTrack);
+                timeline.Tracks.Remove(refTrack);
+
 
             if (subtitles.Count <= 0) return;
             
@@ -129,7 +130,7 @@ namespace SrtStudio {
                 Locked = true
             };
             refTrack = track;
-            timeline.AddTrack(track);
+            timeline.Tracks.Insert(0, track);
 
             CreateItemsFromSubs(subtitles, track);
         }
@@ -275,7 +276,7 @@ namespace SrtStudio {
             insertContextMenu = (ContextMenu)FindResource("InsertContextMenu");
 
             timeline.NeedleMoved += Timeline_NeedleMoved;
-            timeline.SelectedItems.CollectionChanged += SelectedChunks_CollectionChanged;
+            timeline.SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
             timeline.ChunkUpdated += Timeline_ChunkUpdated;
             timeline.ChunkContextMenuOpening += Chunk_ContextMenuOpening;
             timeline.ChunkContextMenu = itemContextMenu;
@@ -364,7 +365,7 @@ namespace SrtStudio {
             UpdateTitle();
         }
 
-        void SelectedChunks_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
+        void SelectedItems_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) {
             if (listView.SelectionMode == SelectionMode.Single) return;
             listView.SelectionChanged -= ListView_SelectionChanged;
             foreach (Item item in listView.SelectedItems) {
