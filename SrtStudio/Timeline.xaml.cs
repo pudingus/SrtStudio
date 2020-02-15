@@ -153,7 +153,6 @@ namespace SrtStudio
             }
 
             track.TrackContent.Children.Add(chunk);
-            chunk.ParentTrack = track;
         }
 
         public void RemoveChunkFromTrack(Chunk chunk, Track track) {
@@ -617,7 +616,7 @@ namespace SrtStudio
                 if (item.Start <= scrollHorizonRight && item.End >= scrollHorizonLeft) {
                     if (!track.StreamedItems.Contains(item)) {
                         track.StreamedItems.Add(item);
-                        Chunk chunk = new Chunk(this, item) {
+                        Chunk chunk = new Chunk(track, item) {
                             ContextMenu = ChunkContextMenu
                         };
                         chunk.ContextMenuOpening += Chunk_ContextMenuOpening;

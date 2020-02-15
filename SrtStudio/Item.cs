@@ -28,6 +28,13 @@ namespace SrtStudio
             UpdateCps();
         }
 
+        public Item(Subtitle sub, int index) {
+            Sub = sub;
+            UpdateDur();
+            UpdateCps();
+            Index = index;
+        }
+
 
         private int _index;
         public int Index {

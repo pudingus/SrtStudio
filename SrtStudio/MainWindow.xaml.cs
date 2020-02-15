@@ -99,7 +99,7 @@ namespace SrtStudio {
 
             if (subtitles.Count <= 0) return;
             
-            var track = new Track {
+            var track = new Track(timeline) {
                 Name = trackName
             };
             editTrack = track;
@@ -123,7 +123,7 @@ namespace SrtStudio {
 
             if (subtitles.Count <= 0) return;
             
-            var track = new Track {
+            var track = new Track(timeline) {
                 Name = trackName,
                 Height = 50,
                 Locked = true
@@ -202,7 +202,7 @@ namespace SrtStudio {
                 perc = (double)index / count * 100;
             }
 
-            Title = $"{currentFile} {star} - {Local.ProgramName} - {index}/{count} - {perc.ToString("N1")} %";
+            Title = $"{currentFile} {star} - {Local.PROGRAM_NAME} - {index}/{count} - {perc.ToString("N1")} %";
         }
 
         #endregion
@@ -212,11 +212,8 @@ namespace SrtStudio {
         void CreateItemsFromSubs(List<Subtitle> subtitles, Track track) {
             int i = 0;
             foreach (Subtitle sub in subtitles) {
-                i++;
-                Item item = new Item(sub) {
-                    Index = i
-                };
-                track.Items.Add(item);
+                i++;                
+                track.Items.Add(new Item(sub, i));
             }
         }
 
@@ -767,7 +764,7 @@ namespace SrtStudio {
                 editTrack.StreamedItems.Add(item);
                 RecalculateIndexes();
 
-                var chunk = new Chunk(timeline, item) {
+                var chunk = new Chunk(editTrack, item) {
                     ContextMenu = itemContextMenu,
                 };
                 chunk.ContextMenuOpening += Chunk_ContextMenuOpening;

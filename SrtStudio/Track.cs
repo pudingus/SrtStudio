@@ -42,8 +42,11 @@ namespace SrtStudio
         public TrackHeader TrackHeader { get; }
         public Grid TrackContent { get; }
 
-        public Track()
+        public Timeline ParentTimeline { get; }
+
+        public Track(Timeline parentTimeline)
         {
+            ParentTimeline = parentTimeline;
             TrackHeader = new TrackHeader(this) {
                 Height = _height
             };

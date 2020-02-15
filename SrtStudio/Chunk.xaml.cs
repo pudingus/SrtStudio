@@ -32,14 +32,13 @@ namespace SrtStudio
         //}
 
 
-        private Timeline _parent;
         public Item Item { get; }
 
-        public Track ParentTrack { get; set; }
+        public Track ParentTrack { get; }
 
-        public Chunk(Timeline parent, Item item)
+        public Chunk(Track parentTrack, Item item)
         {
-            _parent = parent;
+            ParentTrack = parentTrack;
             Item = item;
             InitializeComponent();
             selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
@@ -51,7 +50,7 @@ namespace SrtStudio
         }
 
         private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-            Item item = (Item)sender;
+            var item = (Item)sender;
             if (e.PropertyName == nameof(item.Selected)) {
                 selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
             }
@@ -70,9 +69,10 @@ namespace SrtStudio
         }
 
         public void Update() {
-            double margin = Item.Start.TotalSeconds / _parent.Timescale * _parent.Pixelscale;
+            var timeline = ParentTrack.ParentTimeline;
+            double margin = Item.Start.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
             Margin = new Thickness(margin, 0, 0, 0);
-            double width = Item.Dur.TotalSeconds / _parent.Timescale * _parent.Pixelscale;
+            double width = Item.Dur.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
             Width = width;
         }
 

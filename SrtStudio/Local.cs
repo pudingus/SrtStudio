@@ -6,6 +6,6 @@ using System.Threading.Tasks;
 
 namespace SrtStudio {
     public static class Local {
-        public const string ProgramName = "SrtStudio";
+        public const string PROGRAM_NAME = "SrtStudio";
     }
 }
