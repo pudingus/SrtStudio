@@ -16,68 +16,53 @@ using System.Windows.Shapes;
 namespace SrtStudio
 {
     /// <summary>
-    /// Interaction logic for Event.xaml
+    /// Container for Items
     /// </summary>
     public partial class Chunk : UserControl
     {
-        public bool Locked { get; set; }
-        //private bool _selected;
-        //public bool Selected {
-        //    get { return _selected; }
-        //    set {
-        //        _selected = value;
-        //        if (_selected) selBorder.Visibility = Visibility.Visible;
-        //        else selBorder.Visibility = Visibility.Hidden;
-        //    }
-        //}
 
+        bool locked;
+        public bool Locked { 
+            get {
+                return locked;
+            } 
+            set {
+                locked = value;
+                var bc = new BrushConverter();
+                if (locked) backRect.Fill = (Brush)bc.ConvertFrom("#FF3C3C3C");
+                else backRect.Fill = (Brush)bc.ConvertFrom("#FFA83535");
+            }
+        }
+
+        bool hilit;
+        public bool Hilit {
+            get => hilit;
+            set {
+                hilit = value;
+                hilitBorder.Visibility = hilit ? Visibility.Visible : Visibility.Hidden;
+            }
+        }
+
+        bool selected;
+        public bool Selected {
+            get => selected; 
+            set {
+                selected = value;
+                selBorder.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
+            }
+        }
 
         public Item Item { get; }
 
-        public Track ParentTrack { get; }
-
-        public Chunk(Track parentTrack, Item item)
-        {
-            ParentTrack = parentTrack;
+        public Chunk(Item item) {
             Item = item;
             InitializeComponent();
-            selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
             hilitBorder.Visibility = Visibility.Hidden;
 
-            Item.PropertyChanged += Item_PropertyChanged;
             DataContext = Item;
-            Update();
         }
 
-        private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-            var item = (Item)sender;
-            if (e.PropertyName == nameof(item.Selected)) {
-                selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
-            }
-            //else if (e.PropertyName == nameof(item.Start)) {
-            //    double margin = item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
-            //    Margin = new Thickness(margin, 0, 0, 0);
-            //    double width = item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
-            //    Width = width;
-            //}
-            //else if (e.PropertyName == nameof(item.Dur)) {
-            //    double margin = item.Start.TotalSeconds / _parent.timescale * _parent.pixelscale;
-            //    Margin = new Thickness(margin, 0, 0, 0);
-            //    double width = item.Dur.TotalSeconds / _parent.timescale * _parent.pixelscale;
-            //    Width = width;
-            //}
-        }
-
-        public void Update() {
-            var timeline = ParentTrack.ParentTimeline;
-            double margin = Item.Start.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
-            Margin = new Thickness(margin, 0, 0, 0);
-            double width = Item.Dur.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
-            Width = width;
-        }
-
-        private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
+        void UserControl_SizeChanged(object sender, SizeChangedEventArgs e) {
             Size size = e.NewSize;
             if (size.Height < 70) {
                 textBlock_dur.Visibility = Visibility.Collapsed;

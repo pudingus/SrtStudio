@@ -308,7 +308,6 @@ namespace SrtStudio {
                 //next item is 'neighbor' to current item
                 if (nextItem.Index == item.Index + 1) {
                     item.End = nextItem.End;
-                    item.Chunk.Update();
                     if (!asDialog)
                         item.Text += " " + nextItem.Text;
                     else
@@ -316,8 +315,6 @@ namespace SrtStudio {
 
                     editTrack.Items.Remove(nextItem);
                     Project.Data.Subtitles.Remove(nextItem.Sub);
-
-                    timeline.RemoveChunkFromTrack(nextItem.Chunk, editTrack);
 
                     i++;
                 }
@@ -388,13 +385,13 @@ namespace SrtStudio {
         void UpdateTimelineSelection(IList removedItems, IList addedItems) {
             foreach (Item item in removedItems) {
                 item.Enabled = false;
-                item.Selected = false;
+                //item.Selected = false;
                 timeline.SelectedItems.Remove(item);
             }
 
             foreach (Item item in addedItems) {
                 item.Enabled = true;
-                item.Selected = true;
+                //item.Selected = true;
 
                 timeline.SelectedItems.Add(item);
             }
@@ -404,7 +401,7 @@ namespace SrtStudio {
 
             if (((FrameworkElement)e.OriginalSource).DataContext is Item item) {
                 //player.Position = item.Sub.Start;
-                Seek(item.Sub.Start);
+                Seek(item.Start);
                 timeline.RevealNeedle();
             }
         }
@@ -729,12 +726,10 @@ namespace SrtStudio {
                 if (dur < TimeSpan.FromSeconds(1.2)) {
                     MessageBox.Show("too short, correcting...");
                     item.End = item.Start + TimeSpan.FromSeconds(1.2);
-                    item.Chunk.Update();
                     Project.SignalChange();
                 }
                 else {
                     item.End = timeline.Position;
-                    item.Chunk.Update();
                     Project.SignalChange();
                 }
             }
@@ -765,17 +760,11 @@ namespace SrtStudio {
                 editTrack.StreamedItems.Add(item);
                 RecalculateIndexes();
 
-                var chunk = new Chunk(editTrack, item) {
-                    ContextMenu = itemContextMenu,
-                };
-                chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
-                item.Chunk = chunk;
-                timeline.AddChunkToTrack(chunk, editTrack);
                 timeline.SelectedItems.Add(item);
                 listView.SelectedItems.Clear();
 
                 listView.SelectedItems.Add(item);
-                item.Selected = true;
+                //item.Selected = true;
 
                 Project.SignalChange();
             }
@@ -803,7 +792,6 @@ namespace SrtStudio {
             foreach (Item item in copy) {
                 editTrack.Items.Remove(item);
                 Project.Data.Subtitles.Remove(item.Sub);
-                timeline.RemoveChunkFromTrack(item.Chunk, editTrack);
                 editTrack.Items.Remove(item);
             }
             RecalculateIndexes();

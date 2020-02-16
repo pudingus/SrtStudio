@@ -82,12 +82,12 @@ namespace SrtStudio
         }
 
 
-        private double _cps;
-        public double CPS { get => _cps; }
+        private double cps;
+        public double CPS { get => cps; }
 
         private void UpdateCps() {
             if (Text != null) {
-                _cps = Text.Length / _dur.TotalSeconds;
+                cps = Text.Length / _dur.TotalSeconds;
                 RaisePropertyChanged(nameof(CPS));
             }
         }
@@ -104,39 +104,19 @@ namespace SrtStudio
             }
         }
 
-        private bool _enabled;
+        
+        private bool enabled;
         public bool Enabled {
-            get => _enabled;
+            get => enabled;
             set {
-                if (_enabled != value) {
-                    _enabled = value;
+                if (enabled != value) {
+                    enabled = value;
                     RaisePropertyChanged(nameof(Enabled));
                 }
             }
         }
+        
 
-        private Thickness _borderThickness;
-        public Thickness BorderThickness {
-            get => _borderThickness;
-            set {
-                if (_borderThickness != value) {
-                    _borderThickness = value;
-                    RaisePropertyChanged(nameof(BorderThickness));
-                }
-            }
-        }
-
-        private bool _selected;
-        public bool Selected {
-            get => _selected;
-            set {
-                if (_selected != value) {
-
-                    _selected = value;
-                    RaisePropertyChanged(nameof(Selected));
-                }
-            }
-        }
 
         public Chunk Chunk { get; set; }
     }

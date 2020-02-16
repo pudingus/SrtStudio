@@ -117,6 +117,39 @@ namespace SrtStudio
 
                         contentStack.Children.Insert(e.NewStartingIndex, track.TrackContent);
                         headerStack.Children.Insert(e.NewStartingIndex, track.TrackHeader);
+
+                        track.Items.CollectionChanged += (sender2, e2) => {
+                            //RecalculateStreamedSet(track);
+                            switch (e2.Action) {
+                                case NotifyCollectionChangedAction.Reset:
+                                    track.StreamedItems.Clear();
+                                    track.TrackContent.Children.Clear();
+                                    break;
+
+                                case NotifyCollectionChangedAction.Add:
+                                    foreach (Item item in e2.NewItems) {
+                                    
+                                        if (!track.StreamedItems.Contains(item)) {
+                                            track.StreamedItems.Add(item);
+                                            Chunk chunk = new Chunk(item) {
+                                                ContextMenu = ChunkContextMenu
+                                            };
+                                            chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+                                            item.Chunk = chunk;
+                                            AddChunkToTrack(chunk, track);
+                                        }
+                                    }
+                                    
+                                    break;
+
+                                case NotifyCollectionChangedAction.Remove:
+                                    foreach (Item item in e2.OldItems) {
+                                        track.StreamedItems.Remove(item);
+                                        RemoveChunkFromTrack(item.Chunk, track);
+                                    }
+                                    break;
+                            }
+                        };
                     }
                     break;
 
@@ -133,7 +166,7 @@ namespace SrtStudio
             needle.BringIntoView(new Rect(new Size(50, 50)));
         }
         
-        public void AddChunkToTrack(Chunk chunk, Track track) {
+        void AddChunkToTrack(Chunk chunk, Track track) {
             chunk.MouseMove += Chunk_MouseMove;
             chunk.MouseLeftButtonDown += Chunk_MouseLeftButtonDown;
             chunk.MouseLeftButtonUp += Chunk_MouseLeftButtonUp;
@@ -144,14 +177,34 @@ namespace SrtStudio
 
             if (track.Locked) {
                 chunk.Locked = true;
-                var bc = new BrushConverter();
-                chunk.backRect.Fill = (Brush)bc.ConvertFrom("#FF3C3C3C");
             }
 
             track.TrackContent.Children.Add(chunk);
+
+            chunk.Item.PropertyChanged += Item_PropertyChanged;
+
+            double margin = chunk.Item.Start.TotalSeconds / Timescale * Pixelscale;
+            chunk.Margin = new Thickness(margin, 0, 0, 0);
+            chunk.Width = chunk.Item.Dur.TotalSeconds / Timescale * Pixelscale;
         }
 
-        public void RemoveChunkFromTrack(Chunk chunk, Track track) {
+        private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            var item = (Item)sender;            
+
+            switch (e.PropertyName) {
+                //case nameof(item.Selected):
+                //    item.Chunk.selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
+                //    break;
+                case nameof(item.Start):
+                case nameof(item.Dur):
+                    double margin = item.Start.TotalSeconds / Timescale * Pixelscale;
+                    item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
+                    item.Chunk.Width = item.Dur.TotalSeconds / Timescale * Pixelscale;
+                    break;
+            }
+        }
+
+        void RemoveChunkFromTrack(Chunk chunk, Track track) {
             track.TrackContent.Children.Remove(chunk);
         }
 
@@ -171,13 +224,13 @@ namespace SrtStudio
         void SelectedItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
             if (e.OldItems != null) {
                 foreach (Item item in e.OldItems) {
-                    item.Selected = false;
+                    item.Chunk.Selected = false;
                 }
             }
 
             if (e.NewItems != null) {
                 foreach (Item item in e.NewItems) {
-                    item.Selected = true;
+                    item.Chunk.Selected = true;
                 }
             }
         }
@@ -243,21 +296,19 @@ namespace SrtStudio
                 }
 
                 if (afterPoint) {
-                    Chunk chunk = draggedChunk;
-
 
                     if (draggingPoint == DraggingPoint.End) {
-                        chunk.Width -= deltax;
-                        ChunkUpdated?.Invoke(this, chunk);
+                        draggedChunk.Width -= deltax;
+                        ChunkUpdated?.Invoke(this, draggedChunk);
 
                     }
                     else if (draggingPoint == DraggingPoint.Start) {
-                        double mleft = chunk.Margin.Left;
+                        double mleft = draggedChunk.Margin.Left;
                         mleft -= deltax;
-                        chunk.Width += deltax;
+                        draggedChunk.Width += deltax;
 
-                        chunk.Margin = new Thickness(mleft, 0, 0, 0);
-                        ChunkUpdated?.Invoke(this, chunk);
+                        draggedChunk.Margin = new Thickness(mleft, 0, 0, 0);
+                        ChunkUpdated?.Invoke(this, draggedChunk);
 
                     }
                     //user is moving his mouse after he clicked in the middle of a chunk
@@ -270,16 +321,16 @@ namespace SrtStudio
                                 item.End -= timeDelta;
 
                                 ////old way
-                                //double mleft = item.Chunk.Margin.Left;
+                                //double mleft = item.draggedChunk.Margin.Left;
                                 //mleft -= deltax;
-                                //item.Chunk.Margin = new Thickness(mleft, 0, 0, 0);
-                                //OnChunkUpdated?.Invoke(item.Chunk);
+                                //item.draggedChunk.Margin = new Thickness(mleft, 0, 0, 0);
+                                //OnChunkUpdated?.Invoke(item.draggedChunk);
                             }
-                            UpdateStreamedChunks(draggedChunk.ParentTrack);
-                            RecalculateStreamedSet(draggedChunk.ParentTrack);
+                            //RecalculateStreamedSet(draggedChunk.ParentTrack);
 
                         }
                         else {
+                            /*
                             //loop from selected item forward
                             for (int i = draggedChunk.Item.Index-1; i < draggedChunk.ParentTrack.Items.Count; i++) {
                                 Item item = draggedChunk.ParentTrack.Items[i];
@@ -288,13 +339,13 @@ namespace SrtStudio
                                 item.End -= timeDelta;
 
                                 //Item item = draggedChunk.ParentTrack.Super[i];
-                                //double mleft = item.Chunk.Margin.Left;
+                                //double mleft = item.draggedChunk.Margin.Left;
                                 //mleft -= deltax;
-                                //item.Chunk.Margin = new Thickness(mleft, 0, 0, 0);
-                                //OnChunkUpdated?.Invoke(item.Chunk);
+                                //item.draggedChunk.Margin = new Thickness(mleft, 0, 0, 0);
+                                //OnChunkUpdated?.Invoke(item.draggedChunk);
                             }
-                            UpdateStreamedChunks(draggedChunk.ParentTrack);
-                            RecalculateStreamedSet(draggedChunk.ParentTrack);
+                            //RecalculateStreamedSet(draggedChunk.ParentTrack);
+                            */
                         }
 
                     }
@@ -501,7 +552,7 @@ namespace SrtStudio
         void Chunk_MouseEnter(object sender, MouseEventArgs e) {
             Chunk chunk = (Chunk)sender;
             if (!chunk.Locked) {
-                chunk.hilitBorder.Visibility = Visibility.Visible;
+                chunk.Hilit = true;
             }
         }
 
@@ -510,7 +561,7 @@ namespace SrtStudio
             if (!chunk.Locked) {
                 Cursor = Cursors.Arrow;
 
-                chunk.hilitBorder.Visibility = Visibility.Hidden;
+                chunk.Hilit = false;
             }
         }       
 
@@ -548,7 +599,7 @@ namespace SrtStudio
                 }
 
                 if (Keyboard.Modifiers == ModifierKeys.Control) {
-                    if (!chunk.Item.Selected) {
+                    if (!chunk.Selected) {
                         SelectedItems.Add(chunk.Item);
                     }
                     else {
@@ -556,7 +607,7 @@ namespace SrtStudio
                     }
                 }
                 else {
-                    if (!chunk.Item.Selected) {
+                    if (!chunk.Selected) {
 
                         DeselectAll();
                         //SelectedChunks.Clear();
@@ -571,13 +622,10 @@ namespace SrtStudio
 
         void Chunk_MouseRightButtonDown(object sender, MouseButtonEventArgs e) {
             var chunk = (Chunk)sender;
-            if (!chunk.Locked) {
-                if (!chunk.Item.Selected) {
-
-                    DeselectAll();
-                    //SelectedChunks.Clear();
-                    SelectedItems.Add(chunk.Item);
-                }
+            if (!chunk.Locked && !chunk.Selected) {
+                DeselectAll();
+                //SelectedChunks.Clear();
+                SelectedItems.Add(chunk.Item);                
             }
         }
 
@@ -601,18 +649,14 @@ namespace SrtStudio
         }
 
         #region Helper Methods
-        void UpdateStreamedChunks(Track track) {
-            foreach (Item item in track.StreamedItems) {
-                item.Chunk.Update();
-            }
-        }
+       
         void RecalculateStreamedSet(Track track) {
 
             foreach (Item item in track.Items) {
                 if (item.Start <= scrollHorizonRight && item.End >= scrollHorizonLeft) {
                     if (!track.StreamedItems.Contains(item)) {
                         track.StreamedItems.Add(item);
-                        Chunk chunk = new Chunk(track, item) {
+                        Chunk chunk = new Chunk(item) {
                             ContextMenu = ChunkContextMenu
                         };
                         chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
