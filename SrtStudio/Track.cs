@@ -13,48 +13,53 @@ using System.Windows.Threading;
 
 namespace SrtStudio
 {
-    public class Track
-    {
-        public bool Locked { get; set; }
+    public class Track {
 
-        public List<Item> StreamedItems { get; } = new List<Item>();
-        
-        public ObservableCollection<Item> Items { get; } = new ObservableCollection<Item>();
-                
-        public Item ItemUnderNeedle { get; set; }
+        public Track(Timeline parentTimeline, bool locked) {
+            ParentTimeline = parentTimeline;
+            TrackHeader = new TrackHeader(this) {
+                Height = height
+            };
+            TrackContent = new Grid {
+                Height = height,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
+            Locked = locked;
+        }
 
+
+        public bool             Locked          { get; }
+        public List<Subtitle>   StreamedItems   { get; } = new List<Subtitle>();
+        public Subtitle         ItemUnderNeedle { get; set; }
+        public TrackHeader      TrackHeader     { get; }
+        public Grid             TrackContent    { get; }
+        public Timeline         ParentTimeline  { get; }
+
+
+        public ObservableCollection<Subtitle> Items {
+            get => items;
+            set {
+                items = value;
+                ParentTimeline.RecalculateStreamedSet(this);
+            }
+        }
 
         public string Name {
             get => TrackHeader.trackName.Text;
             set => TrackHeader.trackName.Text = value;
         }
 
-        private double _height = 100;
         public double Height {
-            get => _height;
+            get => height;
             set {
-                _height = value;
-                TrackHeader.Height = _height;
-                TrackContent.Height = _height;
+                height = value;
+                TrackHeader.Height = height;
+                TrackContent.Height = height;
             }
         }
 
-        public TrackHeader TrackHeader { get; }
-        public Grid TrackContent { get; }
-
-        public Timeline ParentTimeline { get; }
-
-        public Track(Timeline parentTimeline)
-        {
-            ParentTimeline = parentTimeline;
-            TrackHeader = new TrackHeader(this) {
-                Height = _height
-            };
-            TrackContent = new Grid {
-                Height = _height,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Stretch
-            };
-        }
+        ObservableCollection<Subtitle> items = new ObservableCollection<Subtitle>();
+        double height = 100;
     }
 }

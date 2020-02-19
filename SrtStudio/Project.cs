@@ -8,7 +8,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Windows.Threading;
 using System.Windows;
-
+using System.Collections.ObjectModel;
 
 namespace SrtStudio
 {
@@ -16,9 +16,9 @@ namespace SrtStudio
     public class ProjectStorage {
         public string VideoPath { get; set; }
         public string TrackName { get; set; }
-        public List<Subtitle> Subtitles { get; set; }
+        public ObservableCollection<Subtitle> Subtitles { get; set; }
         public string RefTrackName { get; set; }
-        public List<Subtitle> RefSubtitles { get; set; }
+        public ObservableCollection<Subtitle> RefSubtitles { get; set; }
         public double VideoPos { get; set; }
         public double ScrollPos { get; set; }
         public int SelIndex { get; set; }
@@ -43,7 +43,7 @@ namespace SrtStudio
                 mainWindow.player.Load(Project.Data.VideoPath);
 
 
-            Project.Data.Subtitles = Project.Data.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
+            //Project.Data.Subtitles = Project.Data.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
 
             mainWindow.LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
             mainWindow.LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);

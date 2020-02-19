@@ -49,7 +49,7 @@
                                             <GridView>
                                                 <GridViewColumn Header="#" DisplayMemberBinding="{Binding Index}" Width="35"/>
                                                 <GridViewColumn Header="Start" DisplayMemberBinding="{Binding Start, StringFormat='h\\:mm\\:ss\\,ff'}" Width="70"/>
-                                                <GridViewColumn Header="Dur." DisplayMemberBinding="{Binding Dur, StringFormat='s\\,ff'}" Width="35"/>
+                                                <GridViewColumn Header="Dur." DisplayMemberBinding="{Binding Duration, StringFormat='s\\,ff'}" Width="35"/>
                                                 <!--<GridViewColumn Header="CPS" DisplayMemberBinding="{Binding CPS}" Width="40"/>-->
 
 

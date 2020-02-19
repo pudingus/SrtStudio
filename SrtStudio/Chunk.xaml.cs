@@ -21,11 +21,16 @@ namespace SrtStudio
     public partial class Chunk : UserControl
     {
 
-        bool locked;
-        public bool Locked { 
-            get {
-                return locked;
-            } 
+        public Chunk(Subtitle subtitle) {
+            DataContext = subtitle;
+            InitializeComponent();
+            hilitBorder.Visibility = Visibility.Hidden;
+            selBorder.Visibility = Visibility.Hidden;
+        }
+
+        
+        public bool Locked {
+            get => locked;
             set {
                 locked = value;
                 var bc = new BrushConverter();
@@ -34,7 +39,6 @@ namespace SrtStudio
             }
         }
 
-        bool hilit;
         public bool Hilit {
             get => hilit;
             set {
@@ -43,26 +47,20 @@ namespace SrtStudio
             }
         }
 
-        bool selected;
         public bool Selected {
-            get => selected; 
+            get => selected;
             set {
                 selected = value;
                 selBorder.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
             }
         }
+        
 
-        public Item Item { get; }
+        bool locked;
+        bool hilit;
+        bool selected;        
 
-        public Chunk(Item item) {
-            Item = item;
-            InitializeComponent();
-            hilitBorder.Visibility = Visibility.Hidden;
-
-            DataContext = Item;
-        }
-
-        void UserControl_SizeChanged(object sender, SizeChangedEventArgs e) {
+        void Chunk_SizeChanged(object sender, SizeChangedEventArgs e) {
             Size size = e.NewSize;
             if (size.Height < 70) {
                 textBlock_dur.Visibility = Visibility.Collapsed;

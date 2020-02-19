@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Windows;
+using System.Collections.ObjectModel;
 
 namespace SrtStudio
 {
@@ -12,7 +13,7 @@ namespace SrtStudio
     {
         static Subtitle subtitle = new Subtitle();
 
-        public static void Write(string filename, List<Subtitle> list) {
+        public static void Write(string filename, ObservableCollection<Subtitle> list) {
             StreamWriter writer = new StreamWriter(filename);
 
             int i = 0;
@@ -37,8 +38,8 @@ namespace SrtStudio
         static int mode = 0;
         static int lnumber = 0;
 
-        public static List<Subtitle> Read(string filename) {
-            List<Subtitle> list = new List<Subtitle>();
+        public static ObservableCollection<Subtitle> Read(string filename) {
+            var list = new ObservableCollection<Subtitle>();
 
             //string s = File.ReadAllText(filename);
             //StringReader reader = new StringReader(s);
@@ -68,7 +69,7 @@ namespace SrtStudio
                     bool found = false;
                     while (line != "" && !found) {
                         if (line.Length >= 12) {
-                            if (IsLineTimecode(line))
+                            if (IsTimecode(line))
                             {
                                 found = true;
                                 subtitle.Start = ParseTimecode(line);
@@ -82,7 +83,7 @@ namespace SrtStudio
                     found = false;
                     while (line != "" && !found) {
                         if (line.Length >= 12) {
-                            if (IsLineTimecode(line))
+                            if (IsTimecode(line))
                             {
                                 found = true;
                                 subtitle.End = ParseTimecode(line);
@@ -101,7 +102,7 @@ namespace SrtStudio
             //MessageBox.Show("done");
         }
 
-        private static bool IsLineTimecode(string line) {
+        static bool IsTimecode(string line) {
             return (line[0] >= '0' && line[0] <= '9') &&
                     (line[1] >= '0' && line[1] <= '9') &&
                     (line[2] == ':') &&
@@ -116,7 +117,7 @@ namespace SrtStudio
                     (line[11] >= '0' && line[11] <= '9');
         }
 
-        private static TimeSpan ParseTimecode(string line) {
+        static TimeSpan ParseTimecode(string line) {
             int hour = Convert.ToInt32(line.Substring(0, 2));
             int minute = Convert.ToInt32(line.Substring(3, 2));
             int second = Convert.ToInt32(line.Substring(6, 2));

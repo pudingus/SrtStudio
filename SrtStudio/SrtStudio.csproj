@@ -121,12 +121,11 @@
     <Compile Include="HtmlConverter\HtmlToXamlConverter.cs" />
     <Compile Include="HtmlRichTextBox.cs" />
     <Compile Include="InlineTextBlock.cs" />
-    <Compile Include="Item.cs" />
+    <Compile Include="Subtitle.cs" />
     <Compile Include="Local.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Srt.cs" />
     <Compile Include="StringOperations.cs" />
-    <Compile Include="Subtitle.cs" />
     <Compile Include="Timeline.xaml.cs">
       <DependentUpon>Timeline.xaml</DependentUpon>
     </Compile>
@@ -134,6 +133,7 @@
     <Compile Include="TrackHeader.xaml.cs">
       <DependentUpon>TrackHeader.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Trash.cs" />
     <Page Include="themes\Blend.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

@@ -25,28 +25,42 @@ namespace SrtStudio
     /// </summary>
     public partial class Timeline : UserControl {
 
-        public delegate void NeedleMovedEventHandler(object sender);
-        public event NeedleMovedEventHandler NeedleMoved;
 
+        public Timeline() {
+            InitializeComponent();
 
-        public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
-        public event ChunkUpdatedEventHandler ChunkUpdated;
+            SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
 
-        public ObservableCollection<Item> SelectedItems { get; } = new ObservableCollection<Item>();
-
-        public enum DraggingPoint {
-            Start,
-            Middle,
-            End
+            Tracks.CollectionChanged += Tracks_CollectionChanged;
+            
+            ChunkUpdated += Timeline_ChunkUpdated;
         }
+
+
+        public delegate void NeedleMovedEventHandler(object sender);
+        public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
+
+
+        public event NeedleMovedEventHandler    NeedleMoved;
+        public event ChunkUpdatedEventHandler   ChunkUpdated;
+        public event ContextMenuEventHandler    ChunkContextMenuOpening;
+
+        
+
+
+
+        
 
         public int Timescale => 10;   //one page is 'scale' (30) seconds
         public int Pixelscale => 1000;        
 
-        public bool Ripple { get; set; }
+        public bool         Ripple              { get; set; }
+        public ContextMenu  ChunkContextMenu    { get; set; }
 
 
-        public ObservableCollection<Track> Tracks { get; } = new ObservableCollection<Track>();
+        public ObservableCollection<Track>      Tracks          { get; } = new ObservableCollection<Track>();
+        public ObservableCollection<Subtitle>   SelectedItems   { get; } = new ObservableCollection<Subtitle>();
+
 
         public TimeSpan Position {
             get {
@@ -59,9 +73,9 @@ namespace SrtStudio
 
                 var position = value;
                 foreach (Track track in Tracks) {                    
-                    foreach (Item item in track.Items) {
-                        if (position >= item.Start && position <= item.End) {
-                            track.ItemUnderNeedle = item;
+                    foreach (Subtitle subtitle in track.Items) {
+                        if (position >= subtitle.Start && position <= subtitle.End) {
+                            track.ItemUnderNeedle = subtitle;
                             break;
                         }
                     }
@@ -69,38 +83,60 @@ namespace SrtStudio
             }
         }
 
-        public ContextMenu ChunkContextMenu { get; set; }
-        public event ContextMenuEventHandler ChunkContextMenuOpening;
 
-        TrackHeader draggedHeader;
-        const int DRAG_SIZE = 10;
-        Point point;
-        readonly DispatcherTimer clickTimer = new DispatcherTimer();
-        bool beforetime = true;
-        double startdeltax;
-        bool afterPoint = false;
-        Chunk draggedChunk;
-        DraggingPoint draggingPoint;
-        TimeSpan scrollHorizonLeft, scrollHorizonRight;
-        bool seekbarDown = false;
-        bool afterDblClick;
-        Point startPoint;
-        //bool chunkCtxMenu = false;
-
-        public Timeline() {
-            InitializeComponent();
-
-            SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
-
-            Tracks.CollectionChanged += Tracks_CollectionChanged;
-
-            clickTimer.Interval = new TimeSpan(0, 0, 0, 0, 150);
-            clickTimer.Tick += ClickTimer_Tick;
-
-            ChunkUpdated += Timeline_ChunkUpdated;
+        const int       DRAG_SIZE = 10;
+              
+        
+        public enum DraggingPoint {
+            None,
+            Start,
+            Middle,
+            End,
         }
 
-        private void Tracks_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
+        DraggingPoint draggingPoint;
+
+        Point prevPos;
+        Point startPos;
+        bool isEditingChunk = false;
+        bool afterDblClick;
+        bool draggingHeader = false;
+
+
+        public void RevealNeedle() {
+            needle.BringIntoView(new Rect(new Size(50, 50)));
+        }
+
+       
+        public void AddChunkToTrack(Chunk chunk, Track track) { 
+            var subtitle = (Subtitle)chunk.DataContext;
+            chunk.Locked = track.Locked;
+            if (!track.Locked) {
+                chunk.MouseMove += Chunk_MouseMove;
+                chunk.MouseLeftButtonDown += Chunk_MouseLeftButtonDown;
+                chunk.MouseLeftButtonUp += Chunk_MouseLeftButtonUp;
+                chunk.MouseRightButtonDown += Chunk_MouseRightButtonDown;
+                chunk.MouseEnter += Chunk_MouseEnter;
+                chunk.MouseLeave += Chunk_MouseLeave;
+                chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+            }
+            track.TrackContent.Children.Add(chunk);
+            subtitle.PropertyChanged += Item_PropertyChanged;
+            UpdateSubtitleChunk(subtitle);
+        }
+
+        void UpdateSubtitleChunk(Subtitle subtitle) {
+            double margin = subtitle.Start.TotalSeconds / Timescale * Pixelscale;
+            subtitle.Chunk.Margin = new Thickness(margin, 0, 0, 0);
+            subtitle.Chunk.Width = subtitle.Duration.TotalSeconds / Timescale * Pixelscale;
+        }
+
+
+        public void RemoveChunkFromTrack(Chunk chunk, Track track) {
+            track.TrackContent.Children.Remove(chunk);
+        }
+
+        void Tracks_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
 
             switch (e.Action) {
                 case NotifyCollectionChangedAction.Reset:
@@ -119,7 +155,7 @@ namespace SrtStudio
                         headerStack.Children.Insert(e.NewStartingIndex, track.TrackHeader);
 
                         track.Items.CollectionChanged += (sender2, e2) => {
-                            //RecalculateStreamedSet(track);
+                            
                             switch (e2.Action) {
                                 case NotifyCollectionChangedAction.Reset:
                                     track.StreamedItems.Clear();
@@ -127,26 +163,11 @@ namespace SrtStudio
                                     break;
 
                                 case NotifyCollectionChangedAction.Add:
-                                    foreach (Item item in e2.NewItems) {
-                                    
-                                        if (!track.StreamedItems.Contains(item)) {
-                                            track.StreamedItems.Add(item);
-                                            Chunk chunk = new Chunk(item) {
-                                                ContextMenu = ChunkContextMenu
-                                            };
-                                            chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
-                                            item.Chunk = chunk;
-                                            AddChunkToTrack(chunk, track);
-                                        }
-                                    }
-                                    
+                                    RecalculateStreamedSet(track);
                                     break;
 
                                 case NotifyCollectionChangedAction.Remove:
-                                    foreach (Item item in e2.OldItems) {
-                                        track.StreamedItems.Remove(item);
-                                        RemoveChunkFromTrack(item.Chunk, track);
-                                    }
+                                    RecalculateStreamedSet(track);
                                     break;
                             }
                         };
@@ -162,278 +183,101 @@ namespace SrtStudio
             }            
         }
 
-        public void RevealNeedle() {
-            needle.BringIntoView(new Rect(new Size(50, 50)));
-        }
-        
-        void AddChunkToTrack(Chunk chunk, Track track) {
-            chunk.MouseMove += Chunk_MouseMove;
-            chunk.MouseLeftButtonDown += Chunk_MouseLeftButtonDown;
-            chunk.MouseLeftButtonUp += Chunk_MouseLeftButtonUp;
-            chunk.MouseRightButtonDown += Chunk_MouseRightButtonDown;
-            chunk.MouseEnter += Chunk_MouseEnter;
-            chunk.MouseLeave += Chunk_MouseLeave;
-            chunk.PreviewMouseDoubleClick += Chunk_PreviewMouseDoubleClick;
-
-            if (track.Locked) {
-                chunk.Locked = true;
-            }
-
-            track.TrackContent.Children.Add(chunk);
-
-            chunk.Item.PropertyChanged += Item_PropertyChanged;
-
-            double margin = chunk.Item.Start.TotalSeconds / Timescale * Pixelscale;
-            chunk.Margin = new Thickness(margin, 0, 0, 0);
-            chunk.Width = chunk.Item.Dur.TotalSeconds / Timescale * Pixelscale;
-        }
-
-        private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
-            var item = (Item)sender;            
+        void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+            var subtitle = (Subtitle)sender;            
 
             switch (e.PropertyName) {
-                //case nameof(item.Selected):
-                //    item.Chunk.selBorder.Visibility = item.Selected ? Visibility.Visible : Visibility.Hidden;
+                //case nameof(subtitle.Selected):
+                //    subtitle.Chunk.selBorder.Visibility = subtitle.Selected ? Visibility.Visible : Visibility.Hidden;
                 //    break;
-                case nameof(item.Start):
-                case nameof(item.Dur):
-                    double margin = item.Start.TotalSeconds / Timescale * Pixelscale;
-                    item.Chunk.Margin = new Thickness(margin, 0, 0, 0);
-                    item.Chunk.Width = item.Dur.TotalSeconds / Timescale * Pixelscale;
+                case nameof(subtitle.Start):
+                case nameof(subtitle.Duration):
+                    UpdateSubtitleChunk(subtitle);
                     break;
             }
         }
 
-        void RemoveChunkFromTrack(Chunk chunk, Track track) {
-            track.TrackContent.Children.Remove(chunk);
-        }
+        
+        void SelectedItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {            
+            switch (e.Action) {
+                case NotifyCollectionChangedAction.Reset:
+                    foreach (Track track in Tracks) {
+                        foreach (Subtitle subtitle in track.StreamedItems) {
+                            subtitle.Chunk.Selected = false;
+                        }
+                    }
+                    break;
+            }            
 
-        public void DeselectAll() {
-            var copy = new ObservableCollection<Item>(SelectedItems);
-            foreach (Item item in copy) {
-                SelectedItems.Remove(item);
-            }
-        }
-
-        Color Darken(Color color, float perc) {
-            var fcolor = System.Drawing.Color.FromArgb(color.R, color.G, color.B);
-            fcolor = System.Windows.Forms.ControlPaint.Dark(fcolor, perc);
-            return Color.FromRgb(fcolor.R, fcolor.G, fcolor.B);
-        }
-
-        void SelectedItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
             if (e.OldItems != null) {
-                foreach (Item item in e.OldItems) {
-                    item.Chunk.Selected = false;
+                foreach (Subtitle sub in e.OldItems) {
+                    sub.Chunk.Selected = false;
                 }
             }
 
             if (e.NewItems != null) {
-                foreach (Item item in e.NewItems) {
-                    item.Chunk.Selected = true;
+                foreach (Subtitle sub in e.NewItems) {
+                    sub.Chunk.Selected = true;
                 }
             }
         }
 
-        
 
         void TrackHeader_MouseMove(object sender, MouseEventArgs e) {
-            TrackHeader trackHeader = sender as TrackHeader;
-            Point pointe = e.GetPosition(trackHeader);
-
-            Cursor cursor = Cursors.Arrow;
-            if (IsCursorAtHeaderResizeBorder(pointe, trackHeader)) {
-                cursor = Cursors.SizeNS;
+            var trackHeader = (TrackHeader)sender;
+            Point position = e.GetPosition(trackHeader);
+            
+            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
+                Cursor = Cursors.SizeNS;
             }
-           
-            Cursor = cursor;
+            else {
+                Cursor = Cursors.Arrow;
+            }
+            
+
+            if (draggingHeader == true) {
+                double deltay = position.Y - prevPos.Y;
+
+                trackHeader.Height += deltay;
+                trackHeader.ParentTrack.TrackContent.Height = trackHeader.ActualHeight;
+            }
+
+            prevPos = position;
+        }
+
+        void TrackHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {            
+            var trackHeader = (TrackHeader)sender;
+            Point position = e.GetPosition(trackHeader);
+
+            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
+                Mouse.Capture(trackHeader);
+                draggingHeader = true;
+            } 
+        }
+
+        void TrackHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { 
+            if (draggingHeader == true) {
+                Mouse.Capture(null);
+                draggingHeader = false;
+            }
         }
 
         void TrackHeader_MouseLeave(object sender, MouseEventArgs e) {
             Cursor = Cursors.Arrow;
         }
 
-        void TrackHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-            TrackHeader trackHeader = sender as TrackHeader;
-            Point pointe = e.GetPosition(trackHeader);
+        void Timeline_ChunkUpdated(object sender, Chunk chunk) {            
+            var subtitle = (Subtitle)chunk.DataContext;
 
-            if (IsCursorAtHeaderResizeBorder(pointe, trackHeader)) {
-                draggedHeader = trackHeader;
-                Mouse.Capture(trackHeader);
-            }            
-        }
-
-        void TrackHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            draggedHeader = null;
-            Mouse.Capture(null);
-        }
-
-        void UserControl_PreviewMouseMove(object sender, MouseEventArgs e) {
-            double deltax = point.X;
-            double deltay = point.Y;
-            point = e.GetPosition(headerStack);
-            deltax -= point.X;
-            deltay -= point.Y;
-            //Console.WriteLine(point);
-
-
-            TrackHeader trackHeader = draggedHeader;
-
-            if (trackHeader != null) {
-                trackHeader.Height -= deltay;
-                draggedHeader.ParentTrack.TrackContent.Height = draggedHeader.ActualHeight;
-
-            }
-
-            if (draggedChunk != null) {
-                startdeltax = point.X - startPoint.X;
-                if (startdeltax >= 4.0 || startdeltax <= -4.0) {
-                    Debug.WriteLine("after point " + DateTime.Now);
-                    if (afterPoint == false) {
-                        afterPoint = true;
-                        deltax -= startdeltax;
-                    }
-                }
-
-                if (afterPoint) {
-
-                    if (draggingPoint == DraggingPoint.End) {
-                        draggedChunk.Width -= deltax;
-                        ChunkUpdated?.Invoke(this, draggedChunk);
-
-                    }
-                    else if (draggingPoint == DraggingPoint.Start) {
-                        double mleft = draggedChunk.Margin.Left;
-                        mleft -= deltax;
-                        draggedChunk.Width += deltax;
-
-                        draggedChunk.Margin = new Thickness(mleft, 0, 0, 0);
-                        ChunkUpdated?.Invoke(this, draggedChunk);
-
-                    }
-                    //user is moving his mouse after he clicked in the middle of a chunk
-                    else if (draggingPoint == DraggingPoint.Middle) {
-                        if (!Ripple) {
-                            foreach (Item item in SelectedItems) {
-
-                                TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / Pixelscale * Timescale);
-                                item.Start -= timeDelta;
-                                item.End -= timeDelta;
-
-                                ////old way
-                                //double mleft = item.draggedChunk.Margin.Left;
-                                //mleft -= deltax;
-                                //item.draggedChunk.Margin = new Thickness(mleft, 0, 0, 0);
-                                //OnChunkUpdated?.Invoke(item.draggedChunk);
-                            }
-                            //RecalculateStreamedSet(draggedChunk.ParentTrack);
-
-                        }
-                        else {
-                            /*
-                            //loop from selected item forward
-                            for (int i = draggedChunk.Item.Index-1; i < draggedChunk.ParentTrack.Items.Count; i++) {
-                                Item item = draggedChunk.ParentTrack.Items[i];
-                                TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / Pixelscale * Timescale);
-                                item.Start -= timeDelta;
-                                item.End -= timeDelta;
-
-                                //Item item = draggedChunk.ParentTrack.Super[i];
-                                //double mleft = item.draggedChunk.Margin.Left;
-                                //mleft -= deltax;
-                                //item.draggedChunk.Margin = new Thickness(mleft, 0, 0, 0);
-                                //OnChunkUpdated?.Invoke(item.draggedChunk);
-                            }
-                            //RecalculateStreamedSet(draggedChunk.ParentTrack);
-                            */
-                        }
-
-                    }
-                }
-            }
-        }
-
-        void UserControl_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            if (afterDblClick) {
-                afterDblClick = false;
-                return;
-            }
-            if (afterPoint && draggedChunk != null) return;
-
-            //disable seeking while multiselecting chunks with ctrl
-            if (Keyboard.Modifiers == ModifierKeys.Control) return;
-
-            if (!afterPoint && draggedChunk != null) {
-                if (draggingPoint == DraggingPoint.Start) {
-                    needle.Margin = new Thickness(draggedChunk.Margin.Left, 0, 0, 0);
-                    NeedleMoved?.Invoke(this);
-                }
-                else if (draggingPoint == DraggingPoint.End) {
-                    needle.Margin = new Thickness(draggedChunk.Margin.Left + draggedChunk.Width, 0, 0, 0);
-                    NeedleMoved?.Invoke(this);
-                }
-                else {
-                    Point pointe = e.GetPosition(contentStack);
-                    needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-                    NeedleMoved?.Invoke(this);
-                }
-
-
-            }
-            if (!afterPoint && draggedChunk == null) {
-                Point pointe = e.GetPosition(contentStack);
-
-                Point pointscr = e.GetPosition(scrollbar);
-
-                Debug.WriteLine($"{pointe.X} {pointe.Y}");
-                Debug.WriteLine($"{pointscr.X} {pointscr.Y}");
-
-
-
-                //not on scrollbar
-                if (pointscr.Y < 0) {
-
-
-                    if (point.X > headerStack.ActualWidth) {
-                        needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-                        NeedleMoved?.Invoke(this);
-                        Debug.WriteLine("DIS!");
-                    }
-                }
-
-
-            }
-        }
-
-        void UserControl_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
-            //dirty hack
-            //Task.Delay(2).ContinueWith(t => {
-            //    Dispatcher.Invoke(() => {
-            //        if (!chunkCtxMenu) {
-            //            if (!afterPoint &&draggedChunk == null) {
-            //                Point pointe = Mouse.GetPosition(stack);
-            //                needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-            //                OnNeedleMoved?.Invoke();
-            //            }
-            //        }
-            //        chunkCtxMenu = false;
-            //    });
-            //});
-        }
-
-
-
-        void Timeline_ChunkUpdated(object sender, Chunk chunk) {
-            Item item = (Item)chunk.DataContext;
-
-            //correct values in 'item'
+            //correct values in 'subtitle'
             double start = chunk.Margin.Left / Pixelscale * Timescale;
-            item.Start = TimeSpan.FromSeconds(start);
+            subtitle.Start = TimeSpan.FromSeconds(start);
 
             double dur = chunk.Width / Pixelscale * Timescale;
             double end = start + dur;
-            item.End = TimeSpan.FromSeconds(end);
+            subtitle.End = TimeSpan.FromSeconds(end);            
         }
+
 
         void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             ScrollViewer sv = (ScrollViewer)sender;
@@ -460,23 +304,8 @@ namespace SrtStudio
             scrollbar.LargeChange = 0.004 * sv.ScrollableWidth;
 
 
-            //scrollbar.
-            ////scrollbar.SmallChange = 1000;
-            ////scrollbar.LargeChange = 1000;
-
-            //Console.WriteLine("scroll changed");
-            //Console.WriteLine(e.ViewportWidth);
-            //Console.WriteLine(e.HorizontalOffset);
-            //Console.WriteLine(e.ExtentWidth);
-            //Console.WriteLine(sv.ScrollableWidth);
-
-            //if (SuperList.Count < 1) return;
             if (e.HorizontalChange == 0) return;
 
-            double val = svHor.HorizontalOffset / Pixelscale * Timescale;
-            scrollHorizonLeft = TimeSpan.FromSeconds(val);
-            val = (svHor.ViewportWidth + svHor.HorizontalOffset) / Pixelscale * Timescale;
-            scrollHorizonRight = TimeSpan.FromSeconds(val);
 
             foreach (Track track in Tracks) {
                 RecalculateStreamedSet(track);
@@ -488,189 +317,219 @@ namespace SrtStudio
         }
 
         
-        void Seekbar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-
-            Point pointe = e.GetPosition(contentStack);
-            needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-            NeedleMoved?.Invoke(this);
-            seekbarDown = true;
-            Mouse.Capture(seekbar);
-        }
-
-        void Seekbar_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-            if (seekbarDown) {
-                seekbarDown = false;
-                Mouse.Capture(null);
+        void Seekbar_MouseMove(object sender, MouseEventArgs e) {  
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                Mouse.Capture(seekbar);
+                SnapNeedleToCursor();
+            }
+            else {
+                Mouse.Capture(null);               
             }
         }
-
-        void Seekbar_MouseMove(object sender, MouseEventArgs e) {
-            if (seekbarDown) {
-                Point pointe = e.GetPosition(contentStack);
-                needle.Margin = new Thickness(pointe.X, 0, 0, 0);
-                NeedleMoved?.Invoke(this);
-            }
-        }
-        
-
-
-        void ClickTimer_Tick(object sender, EventArgs e) {
-            beforetime = false;
-            clickTimer.Stop();
-        }
-
+               
         void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
             ChunkContextMenuOpening?.Invoke(sender, e);
-            //chunkCtxMenu = true;
-        }    
-        
-        void Chunk_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e) {
-            afterDblClick = true;
-            var chunk = (Chunk)sender;
-
-            needle.Margin = new Thickness(chunk.Margin.Left, 0, 0, 0);
-            NeedleMoved?.Invoke(this);
-            e.Handled = true;
         }
+
 
 
         void Chunk_MouseMove(object sender, MouseEventArgs e) {
-            Chunk chunk = (Chunk)sender;
-            if (!chunk.Locked) {
-                Point point = e.GetPosition(chunk);
+            var chunk = (Chunk)sender;
+            Point position = e.GetPosition(headerStack);
 
-                Cursor cursor = Cursors.Arrow;
-                if (IsCursorVerticallyInChunkBounds(point, chunk)) {
-                    if (IsCursorHorizontallyAtStartBorder(point) || IsCursorHorizontallyAtEndBorder(point, chunk)) {
-                        cursor = Cursors.SizeWE;
+            //resize kurzor po najetí na kraj chunku
+            if (IsCursorHorizontallyAtChunkStartBorder(chunk) ||
+                IsCursorHorizontallyAtChunkEndBorder(chunk)) 
+            {
+                Cursor = Cursors.SizeWE;
+            }
+            else {
+                Cursor = Cursors.Arrow;
+            }
+
+            double deltax = position.X - prevPos.X;
+
+            if (draggingPoint != DraggingPoint.None) {
+
+                double startdeltax = position.X - startPos.X;
+                if (startdeltax >= 4.0 || startdeltax <= -4.0) {
+                    //Debug.WriteLine("after point " + DateTime.Now);
+                    if (isEditingChunk == false) {
+                        isEditingChunk = true;
+                        deltax += startdeltax;
                     }
                 }
-                Cursor = cursor;
+
+                if (isEditingChunk) {
+                    //Debug.WriteLine($"deltax: {deltax}");
+
+                    if (draggingPoint == DraggingPoint.Start) {
+                        ResizeChunk(chunk, -deltax, deltax);
+                    }
+
+                    else if (draggingPoint == DraggingPoint.End) {
+                        ResizeChunk(chunk, deltax, 0);
+                    }                    
+
+                    //user is moving his mouse after he clicked in the middle of a chunk
+                    if (draggingPoint == DraggingPoint.Middle) {
+                        foreach (Subtitle subtitle in SelectedItems) {
+
+                            //cant modify chunks directly, coz they might not be streamed in
+                            TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / Pixelscale * Timescale);
+                            subtitle.Start += timeDelta;
+                            subtitle.End += timeDelta;
+                        }
+                    }
+                } 
             }
+
+            prevPos = position;
+        }
+
+        void ResizeChunk(Chunk chunk, double addWidth, double addLeftMargin) {
+            chunk.Width += addWidth;
+            chunk.Margin = new Thickness(chunk.Margin.Left + addLeftMargin, 0, 0, 0);
+            ChunkUpdated?.Invoke(this, chunk);
         }
 
         void Chunk_MouseEnter(object sender, MouseEventArgs e) {
-            Chunk chunk = (Chunk)sender;
-            if (!chunk.Locked) {
-                chunk.Hilit = true;
-            }
+            var chunk = (Chunk)sender;
+            chunk.Hilit = true;            
         }
 
         void Chunk_MouseLeave(object sender, MouseEventArgs e) {
-            Chunk chunk = (Chunk)sender;
-            if (!chunk.Locked) {
-                Cursor = Cursors.Arrow;
-
-                chunk.Hilit = false;
-            }
-        }       
-
-        
-
-        void Chunk_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
             var chunk = (Chunk)sender;
-            if (!chunk.Locked) {
-                Point pointc = e.GetPosition(chunk);
-                startPoint = e.GetPosition(headerStack);
-                                
-                if (IsCursorVerticallyInChunkBounds(pointc, chunk)) {
-                    if (IsCursorHorizontallyAtStartBorder(pointc)) {
-                        draggingPoint = DraggingPoint.Start;
-                        draggedChunk = chunk;
-                        Mouse.Capture(chunk);
-                    }
-                    else if (IsCursorHorizontallyAtEndBorder(pointc, chunk)) {
-                        draggingPoint = DraggingPoint.End;
-                        draggedChunk = chunk;
-                        Mouse.Capture(chunk);
-                        startPoint = e.GetPosition(headerStack);
+            chunk.Hilit = false;            
+            Cursor = Cursors.Arrow;
+        }        
 
+        void Chunk_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {            
+            var chunk = (Chunk)sender;
+            startPos = e.GetPosition(headerStack);
+
+            if (Keyboard.Modifiers != ModifierKeys.Control) {
+
+                if (e.ClickCount == 1) {
+                    Mouse.Capture(chunk);
+
+                    if (IsCursorHorizontallyAtChunkStartBorder(chunk)) {
+                        draggingPoint = DraggingPoint.Start;
                     }
-                    //Middle
+                    else if (IsCursorHorizontallyAtChunkEndBorder(chunk)) {
+                        draggingPoint = DraggingPoint.End;
+                    }
                     else {
                         draggingPoint = DraggingPoint.Middle;
-                        draggedChunk = chunk;
-                        Mouse.Capture(chunk);
-
-                        if (Ripple) {
-
-                        }
                     }
+                }  
+                if (e.ClickCount >= 2) {
+                    afterDblClick = true; //e.Handled nestačí
+
+                    draggingPoint = DraggingPoint.None;
+                    isEditingChunk = false;
+                    Mouse.Capture(null);
+
+                    SnapNeedleToChunkStart(chunk);
                 }
-
-                if (Keyboard.Modifiers == ModifierKeys.Control) {
-                    if (!chunk.Selected) {
-                        SelectedItems.Add(chunk.Item);
-                    }
-                    else {
-                        SelectedItems.Remove(chunk.Item);
-                    }
-                }
-                else {
-                    if (!chunk.Selected) {
-
-                        DeselectAll();
-                        //SelectedChunks.Clear();
-                        SelectedItems.Add(chunk.Item);
-                    }
-                }
-
-                beforetime = true;
-                clickTimer.Start();
             }
-        }
-
-        void Chunk_MouseRightButtonDown(object sender, MouseButtonEventArgs e) {
-            var chunk = (Chunk)sender;
-            if (!chunk.Locked && !chunk.Selected) {
-                DeselectAll();
-                //SelectedChunks.Clear();
-                SelectedItems.Add(chunk.Item);                
-            }
-        }
+        }        
 
         void Chunk_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
             var chunk = (Chunk)sender;
-            if (!chunk.Locked) {
+            e.Handled = true;
 
-                draggedChunk = null;
-                Mouse.Capture(null);
-                startdeltax = 0.0;
-                afterPoint = false;
 
-                if (beforetime) {
-                    if (Keyboard.Modifiers != ModifierKeys.Control) {
-                        DeselectAll();
-                        //SelectedChunks.Clear();
-                        SelectedItems.Add(chunk.Item);
+            //nedělat nic po puštění tl. po double clicku, ten je handled zvlášť
+            if (afterDblClick) {
+                afterDblClick = false;                
+            }
+            else {               
+                if (!isEditingChunk) {
+
+                    //když táhnu chunk a jsem před bodem snapu, (liberty zone) a ještě nic neroztahuju, tak po puštění ltm snapnout jehlu na začátek nebo konec chunku 
+                    if (draggingPoint == DraggingPoint.Start) {
+                        SnapNeedleToChunkStart(chunk);
+                    }
+                    else if (draggingPoint == DraggingPoint.End) {
+                        SnapNeedleToChunkEnd(chunk);
+                    }
+                    //kliknul jsem doprostřed, tak dej jehlu kam jsem kliknul
+                    else if (draggingPoint == DraggingPoint.Middle) {
+                        SnapNeedleToCursor();
                     }
                 }
+
+                //když táhnu chunk a jsem za bodem snapu - už měním délku - tak po puštění levýho tlačítko nic dalšího nedělat
+
+                draggingPoint = DraggingPoint.None;
+                Mouse.Capture(null);
+                isEditingChunk = false;
             }
         }
 
+        void SnapNeedleToCursor() {
+            Point position = Mouse.GetPosition(contentStack);
+            needle.Margin = new Thickness(position.X, 0, 0, 0);
+            NeedleMoved?.Invoke(this);
+        }
+
+        void Timeline_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            //kliknul jsem do volnýho místa - mimo chunk - tak tam prdni jehlu
+
+            //myš je napravo od headeru a není na scrollbaru                 
+            if ((e.GetPosition(headerStack).X > headerStack.ActualWidth) &&
+                (e.GetPosition(scrollbar).Y < 0)) {
+
+                SnapNeedleToCursor();
+            }
+        }
+
+        void SnapNeedleToChunkEnd(Chunk chunk) {
+            needle.Margin = new Thickness(chunk.Margin.Left + chunk.Width, 0, 0, 0);
+            NeedleMoved?.Invoke(this);
+        }
+
+        void SnapNeedleToChunkStart(Chunk chunk) {
+            needle.Margin = new Thickness(chunk.Margin.Left, 0, 0, 0);
+            NeedleMoved?.Invoke(this);
+        }
+
+        void Chunk_MouseRightButtonDown(object sender, MouseButtonEventArgs e) {
+            
+            var chunk = (Chunk)sender;
+            var subtitle = (Subtitle)chunk.DataContext;
+            if (!chunk.Selected) {
+                SelectedItems.Clear();
+                SelectedItems.Add(subtitle);                
+            }            
+        }
+
+
         #region Helper Methods
        
-        void RecalculateStreamedSet(Track track) {
+        public void RecalculateStreamedSet(Track track) {
+            var scrollHorizonLeft = TimeSpan.FromSeconds(svHor.HorizontalOffset / Pixelscale * Timescale);
+            var scrollHorizonRight = TimeSpan.FromSeconds((svHor.ViewportWidth + svHor.HorizontalOffset) / Pixelscale * Timescale);
 
-            foreach (Item item in track.Items) {
-                if (item.Start <= scrollHorizonRight && item.End >= scrollHorizonLeft) {
-                    if (!track.StreamedItems.Contains(item)) {
-                        track.StreamedItems.Add(item);
-                        Chunk chunk = new Chunk(item) {
+            foreach (Subtitle subtitle in track.Items) {
+                if (subtitle.Start <= scrollHorizonRight && subtitle.End >= scrollHorizonLeft) {
+                    if (!track.StreamedItems.Contains(subtitle)) {
+                        track.StreamedItems.Add(subtitle);
+                        Chunk chunk = new Chunk(subtitle) {
                             ContextMenu = ChunkContextMenu
                         };
-                        chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
-                        item.Chunk = chunk;
+                        //chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+                        subtitle.Chunk = chunk;
                         AddChunkToTrack(chunk, track);
                     }
                 }
                 else {
-                    track.StreamedItems.Remove(item);
-                    RemoveChunkFromTrack(item.Chunk, track);
+                    track.StreamedItems.Remove(subtitle);
+                    RemoveChunkFromTrack(subtitle.Chunk, track);
                 }
             }
         }
-
 
         bool IsCursorHorizontallyInHeaderBounds(Point cursorPos, TrackHeader trackHeader) {
             return cursorPos.X >= 0 && cursorPos.X <= trackHeader.ActualWidth;
@@ -686,15 +545,19 @@ namespace SrtStudio
         }
 
 
-        bool IsCursorVerticallyInChunkBounds(Point cursorPos, Chunk chunk) {
+        bool IsCursorVerticallyInChunkBounds(Chunk chunk) {
+            var cursorPos = Mouse.GetPosition(chunk);
             return cursorPos.Y >= 0 && cursorPos.Y <= chunk.ActualHeight;
         }
 
-        bool IsCursorHorizontallyAtStartBorder(Point cursorPos) {
+        bool IsCursorHorizontallyAtChunkStartBorder(Chunk chunk) {
+            var cursorPos = Mouse.GetPosition(chunk);
             return cursorPos.X >= 0 && cursorPos.X <= DRAG_SIZE;
         }
 
-        bool IsCursorHorizontallyAtEndBorder(Point cursorPos, Chunk chunk) {
+
+        bool IsCursorHorizontallyAtChunkEndBorder(Chunk chunk) {
+            var cursorPos = Mouse.GetPosition(chunk);
             return cursorPos.X >= chunk.ActualWidth - DRAG_SIZE && cursorPos.X <= chunk.ActualWidth;
         }
 

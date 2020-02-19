@@ -4,17 +4,10 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:SrtStudio"
-             mc:Ignorable="d" d:DesignHeight="250" d:DesignWidth="1100" PreviewMouseMove="UserControl_PreviewMouseMove" PreviewMouseLeftButtonUp="UserControl_PreviewMouseLeftButtonUp" ContextMenuOpening="UserControl_ContextMenuOpening">
+             mc:Ignorable="d" d:DesignHeight="250" d:DesignWidth="1100" MouseLeftButtonUp="Timeline_MouseLeftButtonUp">
     <Grid>
 
-        <!--<StackPanel x:Name="newStack">
-
-        </StackPanel>
-        <Canvas IsHitTestVisible="False">
-            <Border x:Name="resizeBorder" Width="100" Height="100" Background="#550071B2" Visibility="Hidden">
-
-            </Border>
-        </Canvas>-->
+       
         <ScrollViewer Margin="0" VerticalScrollBarVisibility="Auto">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -22,12 +15,13 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
+                <!--header stack-->
                 <StackPanel Grid.Column="0" x:Name="headerStack" Margin="0,20,0,0">
                 </StackPanel>
 
                 <ScrollViewer Grid.Column="1" x:Name="svHor" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Margin="1,0,0,18" PreviewMouseWheel="ScrollViewer_PreviewMouseWheel" ScrollChanged="ScrollViewer_ScrollChanged">
                     <Grid>
-                        <Rectangle x:Name="seekbar" Height="20" Cursor="ScrollWE" VerticalAlignment="Top" HorizontalAlignment="Stretch" MouseLeftButtonDown="Seekbar_MouseLeftButtonDown" MouseLeftButtonUp="Seekbar_MouseLeftButtonUp" MouseMove="Seekbar_MouseMove">
+                        <Rectangle x:Name="seekbar" Height="20" Cursor="ScrollWE" VerticalAlignment="Top" HorizontalAlignment="Stretch" MouseMove="Seekbar_MouseMove">
                             <Rectangle.Fill>
                                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                     <GradientStop Color="#FF212121" Offset="0"/>
