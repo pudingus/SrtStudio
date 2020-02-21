@@ -18,11 +18,12 @@ namespace SrtStudio
         Point startPos;
         bool isEditingChunk = false;
         bool afterDblClick;
+        bool draggingHeader = false;
 
         public Track(Timeline parentTimeline, bool locked)
         {
             ParentTimeline = parentTimeline;
-            TrackHeader = new TrackHeader(this) {
+            TrackHeader = new TrackHeader() {
                 Height = height
             };
             TrackContent = new Grid {
@@ -33,6 +34,11 @@ namespace SrtStudio
             Locked = locked;
             ChunkUpdated += Track_ChunkUpdated;
             Items.CollectionChanged += Items_CollectionChanged;
+
+            TrackHeader.MouseMove += TrackHeader_MouseMove;
+            TrackHeader.MouseLeftButtonDown += TrackHeader_MouseLeftButtonDown;
+            TrackHeader.MouseLeftButtonUp += TrackHeader_MouseLeftButtonUp;
+            TrackHeader.MouseLeave += TrackHeader_MouseLeave;
         }
 
         public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
@@ -99,6 +105,69 @@ namespace SrtStudio
                     RemoveChunk(subtitle.Chunk);
                 }
             }
+        }
+
+        void TrackHeader_MouseMove(object sender, MouseEventArgs e)
+        {
+            var trackHeader = (TrackHeader)sender;
+            Point position = e.GetPosition(trackHeader);
+
+            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
+                ParentTimeline.Cursor = Cursors.SizeNS;
+            }
+            else {
+                ParentTimeline.Cursor = Cursors.Arrow;
+            }
+
+            if (draggingHeader == true) {
+                double deltay = position.Y - prevPos.Y;
+
+                trackHeader.Height += deltay;
+                TrackContent.Height = trackHeader.ActualHeight;
+            }
+
+            prevPos = position;
+        }
+
+        void TrackHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var trackHeader = (TrackHeader)sender;
+            Point position = e.GetPosition(trackHeader);
+
+            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
+                Mouse.Capture(trackHeader);
+                draggingHeader = true;
+            }
+        }
+
+        void TrackHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (draggingHeader == true) {
+                Mouse.Capture(null);
+                draggingHeader = false;
+            }
+        }
+
+        void TrackHeader_MouseLeave(object sender, MouseEventArgs e)
+        {
+            ParentTimeline.Cursor = Cursors.Arrow;
+        }
+
+        bool IsCursorHorizontallyInHeaderBounds(Point cursorPos, TrackHeader trackHeader)
+        {
+            return cursorPos.X >= 0 && cursorPos.X <= trackHeader.ActualWidth;
+        }
+
+        bool IsCursorVerticallyAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
+        {
+            return cursorPos.Y >= trackHeader.ActualHeight - DRAG_SIZE && cursorPos.Y <= trackHeader.ActualHeight;
+        }
+
+        bool IsCursorAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
+        {
+            return 
+                IsCursorHorizontallyInHeaderBounds(cursorPos, trackHeader) &&
+                IsCursorVerticallyAtHeaderResizeBorder(cursorPos, trackHeader);
         }
 
         void CreateChunk(Subtitle subtitle)

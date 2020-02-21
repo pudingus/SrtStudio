@@ -13,10 +13,6 @@ namespace SrtStudio
     /// </summary>
     public partial class Timeline : UserControl
     {
-        const int DRAG_SIZE = 10;
-        Point prevPos;
-        bool draggingHeader = false;
-
         public Timeline()
         {
             InitializeComponent();
@@ -89,11 +85,6 @@ namespace SrtStudio
 
                 case NotifyCollectionChangedAction.Add:
                     foreach (Track track in e.NewItems) {
-                        track.TrackHeader.MouseMove += TrackHeader_MouseMove;
-                        track.TrackHeader.MouseLeftButtonDown += TrackHeader_MouseLeftButtonDown;
-                        track.TrackHeader.MouseLeftButtonUp += TrackHeader_MouseLeftButtonUp;
-                        track.TrackHeader.MouseLeave += TrackHeader_MouseLeave;
-
                         contentStack.Children.Insert(e.NewStartingIndex, track.TrackContent);
                         headerStack.Children.Insert(e.NewStartingIndex, track.TrackHeader);
                     }
@@ -131,53 +122,7 @@ namespace SrtStudio
                     sub.Chunk.Selected = true;
                 }
             }
-        }
-
-        void TrackHeader_MouseMove(object sender, MouseEventArgs e)
-        {
-            var trackHeader = (TrackHeader)sender;
-            Point position = e.GetPosition(trackHeader);
-
-            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
-                Cursor = Cursors.SizeNS;
-            }
-            else {
-                Cursor = Cursors.Arrow;
-            }
-
-            if (draggingHeader == true) {
-                double deltay = position.Y - prevPos.Y;
-
-                trackHeader.Height += deltay;
-                trackHeader.ParentTrack.TrackContent.Height = trackHeader.ActualHeight;
-            }
-
-            prevPos = position;
-        }
-
-        void TrackHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var trackHeader = (TrackHeader)sender;
-            Point position = e.GetPosition(trackHeader);
-
-            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
-                Mouse.Capture(trackHeader);
-                draggingHeader = true;
-            }
-        }
-
-        void TrackHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (draggingHeader == true) {
-                Mouse.Capture(null);
-                draggingHeader = false;
-            }
-        }
-
-        void TrackHeader_MouseLeave(object sender, MouseEventArgs e)
-        {
-            Cursor = Cursors.Arrow;
-        }
+        }        
 
         void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
@@ -237,22 +182,6 @@ namespace SrtStudio
 
                 SnapNeedleToCursor();
             }
-        }
-
-        bool IsCursorHorizontallyInHeaderBounds(Point cursorPos, TrackHeader trackHeader)
-        {
-            return cursorPos.X >= 0 && cursorPos.X <= trackHeader.ActualWidth;
-        }
-
-        bool IsCursorVerticallyAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
-        {
-            return cursorPos.Y >= trackHeader.ActualHeight - DRAG_SIZE && cursorPos.Y <= trackHeader.ActualHeight;
-        }
-
-        bool IsCursorAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
-        {
-            return IsCursorHorizontallyInHeaderBounds(cursorPos, trackHeader) &&
-                IsCursorVerticallyAtHeaderResizeBorder(cursorPos, trackHeader);
         }
     }
 }
