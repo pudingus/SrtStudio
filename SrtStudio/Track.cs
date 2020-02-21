@@ -11,6 +11,7 @@ namespace SrtStudio
     public class Track
     {
         const int DRAG_SIZE = 10;
+        readonly List<Subtitle> streamedItems = new List<Subtitle>();
         ObservableCollection<Subtitle> items = new ObservableCollection<Subtitle>();
         double height = 100;
         DraggingPoint draggingPoint;
@@ -55,7 +56,7 @@ namespace SrtStudio
         }
 
         public bool Locked { get; }
-        public List<Subtitle> StreamedItems { get; } = new List<Subtitle>();
+        public ReadOnlyCollection<Subtitle> StreamedItems => streamedItems.AsReadOnly();
         public Subtitle ItemUnderNeedle { get; set; }
         public TrackHeader TrackHeader { get; }
         public Grid TrackContent { get; }
@@ -95,13 +96,13 @@ namespace SrtStudio
 
             foreach (Subtitle subtitle in Items) {
                 if (subtitle.Start <= scrollHorizonRight && subtitle.End >= scrollHorizonLeft) {
-                    if (!StreamedItems.Contains(subtitle)) {
-                        StreamedItems.Add(subtitle);
+                    if (!streamedItems.Contains(subtitle)) {
+                        streamedItems.Add(subtitle);
                         CreateChunk(subtitle);
                     }
                 }
                 else {
-                    StreamedItems.Remove(subtitle);
+                    streamedItems.Remove(subtitle);
                     RemoveChunk(subtitle.Chunk);
                 }
             }
@@ -165,7 +166,7 @@ namespace SrtStudio
 
         bool IsCursorAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
         {
-            return 
+            return
                 IsCursorHorizontallyInHeaderBounds(cursorPos, trackHeader) &&
                 IsCursorVerticallyAtHeaderResizeBorder(cursorPos, trackHeader);
         }
@@ -205,7 +206,7 @@ namespace SrtStudio
         {
             switch (e.Action) {
                 case NotifyCollectionChangedAction.Reset:
-                    StreamedItems.Clear();
+                    streamedItems.Clear();
                     TrackContent.Children.Clear();
                     break;
 
