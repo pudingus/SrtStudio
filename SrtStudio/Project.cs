@@ -1,19 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
-using System.Windows.Threading;
+using System.Threading.Tasks;
 using System.Windows;
-using System.Collections.ObjectModel;
+using System.Xml.Serialization;
 
 namespace SrtStudio
 {
-
-    public class ProjectStorage {
+    public class ProjectStorage
+    {
         public string VideoPath { get; set; }
         public string TrackName { get; set; }
         public ObservableCollection<Subtitle> Subtitles { get; set; }
@@ -32,9 +28,10 @@ namespace SrtStudio
         public static string FileName { get; private set; } = "Untitled";
         public static ProjectStorage Data { get; set; } = new ProjectStorage();
         public static bool UnsavedChanges { get; private set; }
-        public static bool UnwrittenChanges { get; private set; }        
+        public static bool UnwrittenChanges { get; private set; }
 
-        public static void Open(string filename, bool asBackup = false) {
+        public static void Open(string filename, bool asBackup = false)
+        {
             var mainWindow = MainWindow.Instance;
 
             Project.Read(filename, asBackup);
@@ -61,7 +58,8 @@ namespace SrtStudio
             mainWindow.listView.SelectedIndex = Project.Data.SelIndex;
         }
 
-        public static bool Close() {
+        public static bool Close()
+        {
             var mainWindow = MainWindow.Instance;
 
             if (Project.UnsavedChanges && Dialogs.UnsavedChanges() == MessageBoxResult.Cancel) {
@@ -78,13 +76,14 @@ namespace SrtStudio
             return true;
         }
 
-        private static void Read(string filename, bool asBackup = false) {
-            XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
+        private static void Read(string filename, bool asBackup = false)
+        {
+            var ser = new XmlSerializer(typeof(ProjectStorage));
 
             Settings.Data.LastProject = filename;
 
             using (FileStream stream = File.OpenRead(asBackup ? filename+".temp" : filename)) {
-                using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
+                using (var zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
                     Data = ser.Deserialize(zipStream) as ProjectStorage;
                     FileName = filename;
                     if (asBackup) UnsavedChanges = true;
@@ -105,13 +104,14 @@ namespace SrtStudio
         /// <exception cref="IOException"></exception>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public static void Write(string filename, bool asBackup = false) {
-            XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
+        public static void Write(string filename, bool asBackup = false)
+        {
+            var ser = new XmlSerializer(typeof(ProjectStorage));
 
             Settings.Data.LastProject = filename;
 
-            using (FileStream stream = File.Create(asBackup ? filename+".temp" : filename)) {
-                using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Compress)) {
+            using (FileStream stream = File.Create(asBackup ? filename + ".temp" : filename)) {
+                using (var zipStream = new GZipStream(stream, CompressionMode.Compress)) {
                     ser.Serialize(zipStream, Data);
                     FileName = filename;
                     if (!asBackup) UnsavedChanges = false;
@@ -120,7 +120,8 @@ namespace SrtStudio
             }
         }
 
-        public static void SignalChange() {
+        public static void SignalChange()
+        {
             UnsavedChanges = true;
             UnwrittenChanges = true;
         }

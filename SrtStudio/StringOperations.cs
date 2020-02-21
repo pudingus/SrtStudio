@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace SrtStudio {
-    public static class StringOperations {
-        public static string RemoveNewlines(string s) {
-            StringReader stringReader = new StringReader(s);
+namespace SrtStudio
+{
+    public static class StringOperations
+    {
+        public static string RemoveNewlines(string s)
+        {
+            var stringReader = new StringReader(s);
             string str = "";
             while ((s = stringReader.ReadLine()) != null) {
                 if (str != "")
@@ -18,8 +17,9 @@ namespace SrtStudio {
             return str;
         }
 
-        public static string TrimSpaces(string s) {
-            StringReader stringReader = new StringReader(s);
+        public static string TrimSpaces(string s)
+        {
+            var stringReader = new StringReader(s);
             string paragraph = "";
             while ((s = stringReader.ReadLine()) != null) {
                 s += " ";

@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using System.Windows;
 using System.Collections.ObjectModel;
+using System.IO;
 
 namespace SrtStudio
 {
@@ -13,11 +8,12 @@ namespace SrtStudio
     {
         static Subtitle subtitle = new Subtitle();
 
-        public static void Write(string filename, ObservableCollection<Subtitle> list) {
-            StreamWriter writer = new StreamWriter(filename);
+        public static void Write(string filename, ObservableCollection<Subtitle> subtitles)
+        {
+            var writer = new StreamWriter(filename);
 
             int i = 0;
-            foreach (Subtitle sub in list) {
+            foreach (Subtitle sub in subtitles) {
                 i++;
                 writer.WriteLine(i);
                 string format = "hh\\:mm\\:ss\\,fff";
@@ -31,31 +27,27 @@ namespace SrtStudio
             writer.Close();
         }
 
-        //0 - looking for timecode
-        //1 - looking for text
-        //2 - looking for line break
+        public static ObservableCollection<Subtitle> Read(string filename)
+        {
+            //0 - looking for timecode
+            //1 - looking for text
+            //2 - looking for line break
 
-        static int mode = 0;
-        static int lnumber = 0;
+            int mode = 0;
+            int lineNumber = 0;
 
-        public static ObservableCollection<Subtitle> Read(string filename) {
-            var list = new ObservableCollection<Subtitle>();
+            var subtitles = new ObservableCollection<Subtitle>();
 
-            //string s = File.ReadAllText(filename);
-            //StringReader reader = new StringReader(s);
-            //string line;
-            //while ((line = reader.ReadLine()) != null) {
-
-            StreamReader reader = new StreamReader(filename);
+            var reader = new StreamReader(filename);
             string line;
             while ((line = reader.ReadLine()) != null) {
 
                 if (mode == 1) {
-                    lnumber++;
-                    if (lnumber >= 2 && string.IsNullOrWhiteSpace(line)) {
+                    lineNumber++;
+                    if (lineNumber >= 2 && string.IsNullOrWhiteSpace(line)) {
                         mode = 0;
                         //MessageBox.Show(subtitle.start + " " + subtitle.end + "\n" + subtitle.text);
-                        list.Add(subtitle);
+                        subtitles.Add(subtitle);
                         subtitle = new Subtitle();
                     }
                     else {
@@ -69,8 +61,7 @@ namespace SrtStudio
                     bool found = false;
                     while (line != "" && !found) {
                         if (line.Length >= 12) {
-                            if (IsTimecode(line))
-                            {
+                            if (IsTimecode(line)) {
                                 found = true;
                                 subtitle.Start = ParseTimecode(line);
                                 line = line.Remove(0, 12);
@@ -83,8 +74,7 @@ namespace SrtStudio
                     found = false;
                     while (line != "" && !found) {
                         if (line.Length >= 12) {
-                            if (IsTimecode(line))
-                            {
+                            if (IsTimecode(line)) {
                                 found = true;
                                 subtitle.End = ParseTimecode(line);
                                 line = line.Remove(0, 12);
@@ -97,27 +87,28 @@ namespace SrtStudio
                 }
             }
             reader.Close();
-            return list;
-
-            //MessageBox.Show("done");
+            return subtitles;
         }
 
-        static bool IsTimecode(string line) {
-            return (line[0] >= '0' && line[0] <= '9') &&
-                    (line[1] >= '0' && line[1] <= '9') &&
-                    (line[2] == ':') &&
-                    (line[3] >= '0' && line[3] <= '9') &&
-                    (line[4] >= '0' && line[4] <= '9') &&
-                    (line[5] == ':') &&
-                    (line[6] >= '0' && line[6] <= '9') &&
-                    (line[7] >= '0' && line[7] <= '9') &&
-                    (line[8] == ',') &&
-                    (line[9] >= '0' && line[9] <= '9') &&
-                    (line[10] >= '0' && line[10] <= '9') &&
-                    (line[11] >= '0' && line[11] <= '9');
+        static bool IsTimecode(string line)
+        {
+            return 
+                (line[0] >= '0' && line[0] <= '9') &&
+                (line[1] >= '0' && line[1] <= '9') &&
+                (line[2] == ':') &&
+                (line[3] >= '0' && line[3] <= '9') &&
+                (line[4] >= '0' && line[4] <= '9') &&
+                (line[5] == ':') &&
+                (line[6] >= '0' && line[6] <= '9') &&
+                (line[7] >= '0' && line[7] <= '9') &&
+                (line[8] == ',') &&
+                (line[9] >= '0' && line[9] <= '9') &&
+                (line[10] >= '0' && line[10] <= '9') &&
+                (line[11] >= '0' && line[11] <= '9');
         }
 
-        static TimeSpan ParseTimecode(string line) {
+        static TimeSpan ParseTimecode(string line)
+        {
             int hour = Convert.ToInt32(line.Substring(0, 2));
             int minute = Convert.ToInt32(line.Substring(3, 2));
             int second = Convert.ToInt32(line.Substring(6, 2));

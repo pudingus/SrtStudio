@@ -1,24 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 
-namespace SrtStudio {
+namespace SrtStudio
+{
     [Serializable]
-    public class SettingsStorage {
+    public class SettingsStorage
+    {
         public bool Maximized { get; set; }
         public bool SafelyExited { get; set; }
         public string LastProject { get; set; }
     }
 
-    public static class Settings {
-
+    public static class Settings
+    {
         public static SettingsStorage Data { get; private set; } = new SettingsStorage();
         const string filename = "settings.xml";
-        public static void Load() {
+
+        public static void Load()
+        {
             try {
                 using (StreamReader sr = new StreamReader(filename)) {
                     XmlSerializer xmls = new XmlSerializer(typeof(SettingsStorage));
@@ -43,7 +43,8 @@ namespace SrtStudio {
 
         }
 
-        public static void Save() {
+        public static void Save()
+        {
             using (StreamWriter sw = new StreamWriter(filename)) {
                 XmlSerializer xmls = new XmlSerializer(typeof(SettingsStorage));
                 xmls.Serialize(sw, Data);

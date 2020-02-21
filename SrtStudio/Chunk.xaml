@@ -6,11 +6,14 @@
              xmlns:local="clr-namespace:SrtStudio"
              mc:Ignorable="d"
              d:DesignHeight="100" d:DesignWidth="100" SizeChanged="Chunk_SizeChanged" HorizontalAlignment="Left" VerticalAlignment="Stretch">
-    <Grid>
+
+    <Grid>        
         <!--<Rectangle x:Name="backRect" Fill="#FF3C3C3C" Stroke="Black" StrokeThickness="1"/>-->
+        
+        
 
         <Rectangle x:Name="backRect" Fill="#FFA83535" />
-        <Border x:Name="hilitBorder" Background="#1EE2E2E2" d:IsHidden="True"/>
+        <Border x:Name="hilitBorder" Background="#1EE2E2E2" d:IsHidden="False"/>
         <Border x:Name="selBorder" Background="#35FFFFFF" d:IsHidden="True"/>
         <Border BorderBrush="Black" BorderThickness="1"/>
 

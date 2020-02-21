@@ -1,23 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Xml.Serialization;
 
 namespace SrtStudio
 {
     public class Subtitle : INotifyPropertyChanged
     {
+        int index;
+        TimeSpan start;
+        TimeSpan end;
+        TimeSpan duration;
+        double cps;
+        string text = string.Empty;
+        bool enabled;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public void RaisePropertyChanged(string propertyName) {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        [XmlIgnore]
+        public Chunk Chunk { get; set; }
 
-        private int index;
         public int Index {
             get => index;
             set {
@@ -28,7 +29,6 @@ namespace SrtStudio
             }
         }
 
-        TimeSpan start;
         [XmlIgnore]
         public TimeSpan Start {
             get => start;
@@ -47,7 +47,6 @@ namespace SrtStudio
             set => Start = TimeSpan.Parse(value);
         }
 
-        TimeSpan end;
         [XmlIgnore]
         public TimeSpan End {
             get => end;
@@ -66,7 +65,6 @@ namespace SrtStudio
             set => End = TimeSpan.Parse(value);
         }
 
-        TimeSpan duration;
         [XmlIgnore]
         public TimeSpan Duration {
             get => duration;
@@ -79,7 +77,6 @@ namespace SrtStudio
             }
         }
 
-        double cps;
         [XmlIgnore]
         public double CPS {
             get => cps;
@@ -91,7 +88,6 @@ namespace SrtStudio
             }
         }
 
-        string text = string.Empty;
         public string Text {
             get => text;
             set {
@@ -102,8 +98,7 @@ namespace SrtStudio
                 }
             }
         }
-        
-        bool enabled;
+
         [XmlIgnore]
         public bool Enabled {
             get => enabled;
@@ -115,7 +110,9 @@ namespace SrtStudio
             }
         }
 
-        [XmlIgnore]
-        public Chunk Chunk { get; set; }
+        public void RaisePropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }
