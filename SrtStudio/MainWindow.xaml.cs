@@ -68,7 +68,7 @@ namespace SrtStudio
 
             airWindow = new AirWindow();            
 
-            videoGrid.Children.Remove(overlayGrid);
+            playerGrid.Children.Remove(overlayGrid);
             airWindow.contentGrid.Children.Add(overlayGrid);
 
             bakTimer.Tick += BakTimer_Tick;
