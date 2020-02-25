@@ -113,20 +113,20 @@ namespace SrtStudio
 
             if (e.OldItems != null) {
                 foreach (Subtitle sub in e.OldItems) {
-                    sub.Chunk.Selected = false;
+                    if (sub.Chunk != null) sub.Chunk.Selected = false;
                 }
             }
 
             if (e.NewItems != null) {
                 foreach (Subtitle sub in e.NewItems) {
-                    sub.Chunk.Selected = true;
+                    if (sub.Chunk != null) sub.Chunk.Selected = true;
                 }
             }
         }        
 
         void ScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            ScrollViewer sv = (ScrollViewer)sender;
+            var sv = (ScrollViewer)sender;
             int lines = System.Windows.Forms.SystemInformation.MouseWheelScrollLines;
 
             if (e.Delta > 0) {
@@ -141,7 +141,7 @@ namespace SrtStudio
 
         void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            ScrollViewer sv = (ScrollViewer)sender;
+            var sv = (ScrollViewer)sender;
             scrollbar.Maximum = sv.ScrollableWidth;
             scrollbar.ViewportSize = sv.ViewportWidth;
             scrollbar.Value = sv.HorizontalOffset;

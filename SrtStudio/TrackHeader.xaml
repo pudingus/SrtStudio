@@ -10,5 +10,6 @@
         <!--<Border Background="#FF171717" BorderBrush="Black" BorderThickness="2"></Border>-->
         <Rectangle Fill="#FF171717" Stroke="Black" StrokeThickness="1" />
         <TextBlock x:Name="trackName" Text="Track 1 - eng.srt" Margin="10,10,10,2" Foreground="White" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        <Border x:Name="resizeBorder" Height="10" VerticalAlignment="Bottom" Cursor="SizeNS" Background="#00000000"></Border>
     </Grid>
 </UserControl>

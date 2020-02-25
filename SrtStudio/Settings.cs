@@ -20,8 +20,8 @@ namespace SrtStudio
         public static void Load()
         {
             try {
-                using (StreamReader sr = new StreamReader(filename)) {
-                    XmlSerializer xmls = new XmlSerializer(typeof(SettingsStorage));
+                using (var sr = new StreamReader(filename)) {
+                    var xmls = new XmlSerializer(typeof(SettingsStorage));
                     Data = xmls.Deserialize(sr) as SettingsStorage;
                 }
             }
@@ -45,8 +45,8 @@ namespace SrtStudio
 
         public static void Save()
         {
-            using (StreamWriter sw = new StreamWriter(filename)) {
-                XmlSerializer xmls = new XmlSerializer(typeof(SettingsStorage));
+            using (var sw = new StreamWriter(filename)) {
+                var xmls = new XmlSerializer(typeof(SettingsStorage));
                 xmls.Serialize(sw, Data);
             }
         }

@@ -4,12 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SrtStudio"
-        xmlns:s="clr-namespace:System;assembly=mscorlib"
-        xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
-	    xmlns:windowsForms="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
-        xmlns:airhack="clr-namespace:Airhack;assembly=Airhack"
+        xmlns:wf="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
         mc:Ignorable="d"
-        Title="SrtStudio - Untitled" Height="493" Width="914" Background="#FF3A3A3A" Foreground="White" Closing="Window_Closing" PreviewKeyDown="Window_PreviewKeyDown">
+        Title="SrtStudio - Untitled" Height="493" Width="914" Background="#FF3A3A3A" Foreground="White" Closing="Window_Closing" PreviewKeyDown="Window_PreviewKeyDown" Loaded="Window_Loaded">
     <Window.Resources>
         <ContextMenu x:Key="ItemContextMenu">
             <MenuItem Header="Merge" Click="MenuItemMerge_Click"></MenuItem>
@@ -21,151 +18,113 @@
         </ContextMenu>
     </Window.Resources>
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="*" ></RowDefinition>
+        </Grid.RowDefinitions>
 
-        <xcad:DockingManager x:Name="dockingManager" Margin="0,25,0,0">
-            <xcad:DockingManager.Theme>
-                <xcad:Vs2013DarkTheme/>
-            </xcad:DockingManager.Theme>
-            <xcad:LayoutRoot x:Name="_layoutRoot">
-                <xcad:LayoutPanel Orientation="Vertical">
-                    <xcad:LayoutPanel Orientation="Horizontal" DockHeight="5*">
-                        <xcad:LayoutPanel Orientation="Vertical" DockWidth="430">
-                            <xcad:LayoutAnchorablePane>
-                                <xcad:LayoutAnchorable ContentId="list" Title="List" AutoHideWidth="240">
-                                    <ListView x:Name="listView" AlternationCount="2" Background="#FF212121" Foreground="White" BorderThickness="0" SelectionChanged="ListView_SelectionChanged" MouseDoubleClick="ListView_MouseDoubleClick" TextInput="ListView_TextInput">
-                                        <ListView.Resources>
+        <GridSplitter Grid.Row="0" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"></GridSplitter>
 
-                                        </ListView.Resources>
-                                        <ListView.ItemContainerStyle>
-                                            <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource Ikea}" >
-                                                <Setter Property="ContextMenu" Value="{StaticResource ItemContextMenu}" />
-                                                <EventSetter Event="ContextMenuOpening" Handler="ListViewItem_ContextMenuOpening"/>
-                                                <EventSetter Event="TextInput" Handler="ListViewItem_TextInput"/>
+        <Grid Margin="0,25,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            
+            <GridSplitter Grid.Column="0" Width="5" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,0,0,10"></GridSplitter>
+
+            <Grid x:Name="lvGrid" Grid.Column="0" Margin="0,0,10,10">
+                <ListView 
+                    x:Name="listView" 
+                    AlternationCount="2" 
+                    Background="#FF212121" 
+                    Foreground="White"
+                    BorderThickness="0" 
+                    SelectionChanged="ListView_SelectionChanged"
+                    MouseDoubleClick="ListView_MouseDoubleClick"
+                    TextInput="ListView_TextInput"
+                >
+                    <ListView.Resources>
+
+                    </ListView.Resources>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="{x:Type ListViewItem}" BasedOn="{StaticResource Ikea}" >
+                            <Setter Property="ContextMenu" Value="{StaticResource ItemContextMenu}" />
+                            <EventSetter Event="ContextMenuOpening" Handler="ListViewItem_ContextMenuOpening"/>
+                            <EventSetter Event="TextInput" Handler="ListViewItem_TextInput"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="#" DisplayMemberBinding="{Binding Index}" Width="35"/>
+                            <GridViewColumn Header="Start" DisplayMemberBinding="{Binding Start, StringFormat='h\\:mm\\:ss\\,ff'}" Width="70"/>
+                            <GridViewColumn Header="Dur." DisplayMemberBinding="{Binding Duration, StringFormat='s\\,ff'}" Width="35"/>
+                            <GridViewColumn Header="Text" Width="230">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox
+                                            Text="{Binding Text}"
+                                            IsEnabled="{Binding Enabled}"
+                                            IsHitTestVisible="{Binding Enabled}"
+                                            MinWidth="215"
+                                            Background="#00000000"
+                                            AcceptsReturn="True"
+                                            MaxLength="80"
+                                            TextChanged="TextBox_TextChanged"
+                                            IsEnabledChanged="TextBox_IsEnabledChanged"
+                                            PreviewKeyDown="TextBox_PreviewKeyDown"
+                                            SelectionChanged="TextBox_SelectionChanged"
+                                            HorizontalAlignment="Stretch"
+                                            SpellCheck.IsEnabled="True"                                                                
+                                        />
+
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="CPS" Width="35">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding CPS, StringFormat='N1'}" Width="35" TextAlignment="Right" HorizontalAlignment="Right"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
 
 
-                                            </Style>
-                                        </ListView.ItemContainerStyle>
-                                        <ListView.View>
-                                            <GridView>
-                                                <GridViewColumn Header="#" DisplayMemberBinding="{Binding Index}" Width="35"/>
-                                                <GridViewColumn Header="Start" DisplayMemberBinding="{Binding Start, StringFormat='h\\:mm\\:ss\\,ff'}" Width="70"/>
-                                                <GridViewColumn Header="Dur." DisplayMemberBinding="{Binding Duration, StringFormat='s\\,ff'}" Width="35"/>
-                                                <!--<GridViewColumn Header="CPS" DisplayMemberBinding="{Binding CPS}" Width="40"/>-->
+            <Grid x:Name="videoGrid" Grid.Column="1" Margin="10,0,0,10">
+
+                <WindowsFormsHost x:Name="wfHost" Margin="0,0,0,29">
+                    <wf:Panel x:Name="playerHost" />
+                </WindowsFormsHost>
+
+                <Slider x:Name="slider" ValueChanged="Slider_ValueChanged" Maximum="100" IsMoveToPointEnabled="True" Height="20" VerticalAlignment="Bottom" Margin="38,0,5,4"/>
+                <Button x:Name="playButton" Content="►" ToolTip="Play/pause (F5)" Foreground="White" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
+
+                <Grid x:Name="overlayGrid" Margin="0,0,0,29">
+                    <TextBox SpellCheck.IsEnabled="True" BorderThickness="0" Background="#00000000" x:Name="overlaySubs" FontSize="18" Foreground="Yellow" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="10,10,10,55" FontFamily="Arial">
+                        <TextBox.Text>
+                            What do you mean? lol
+                        </TextBox.Text>
+                        <TextBox.Effect>
+                            <DropShadowEffect Opacity="1" BlurRadius="1" ShadowDepth="1.2" Color="Black">
+                            </DropShadowEffect>
+                        </TextBox.Effect>
+                    </TextBox>
+                </Grid>
+            </Grid>
+        </Grid>
 
 
-                                                <!--<GridViewColumn Header="Text" DisplayMemberBinding="{Binding Text}" Width="180"/>-->
-                                                <!--<GridViewColumn Header="Start" >
-                                                    <GridViewColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <TextBox Text="{Binding Start}" Width="70" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
-                                                        </DataTemplate>
-                                                    </GridViewColumn.CellTemplate>
-                                                </GridViewColumn>
-                                                <GridViewColumn Header="Dur">
-                                                    <GridViewColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <TextBox Text="{Binding Dur}" Width="40" IsReadOnly="False" BorderThickness="0" IsEnabled="{Binding Enabled}" Background="Transparent" Foreground="White"/>
-                                                        </DataTemplate>
-                                                    </GridViewColumn.CellTemplate>
-                                                </GridViewColumn>-->
-                                                <GridViewColumn Header="Text" Width="230">
-                                                    <GridViewColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <!--<TextBlock local:Attached.FormattedText="{Binding Text}" >
-                                                                <Bold FontWeight="ExtraBlack">fffffff</Bold>
-                                                                <Italic FontStyle="Oblique">fffffffff</Italic>
-                                                            </TextBlock>-->
-                                                            <!--<RichTextBox Height="50" local:HtmlRichTextBox.Text="{Binding Text}" Width="200" IsReadOnly="False" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent"/>-->
-                                                            <!--<RichTextBox Width="200" BorderThickness="0" AutoWordSelection="False" IsEnabled="{Binding Enabled}" Foreground="White" Background="Transparent">
-                                                                <FlowDocument>
-                                                                    <Paragraph>
-                                                                        <Run Text="{Binding Text}"></Run>
-                                                                    </Paragraph>
-                                                                </FlowDocument>
-                                                            </RichTextBox>-->
-                                                            <TextBox
-                                                                Text="{Binding Text}"
-                                                                IsEnabled="{Binding Enabled}"
-                                                                IsHitTestVisible="{Binding Enabled}"
-                                                                MinWidth="215"
-                                                                Background="#00000000"
-                                                                AcceptsReturn="True"
-                                                                MaxLength="80"
-                                                                TextChanged="TextBox_TextChanged"
-                                                                IsEnabledChanged="TextBox_IsEnabledChanged"
-                                                                PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                                SelectionChanged="TextBox_SelectionChanged"
-                                                                HorizontalAlignment="Stretch"
-                                                                SpellCheck.IsEnabled="True"
-                                                            />
 
-                                                        </DataTemplate>
-                                                    </GridViewColumn.CellTemplate>
-                                                </GridViewColumn>
-                                                <GridViewColumn Header="CPS" Width="35">
-                                                    <GridViewColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding CPS, StringFormat='N1'}" Width="35" TextAlignment="Right" HorizontalAlignment="Right"/>
-                                                        </DataTemplate>
-                                                    </GridViewColumn.CellTemplate>
-                                                </GridViewColumn>
-                                            </GridView>
-                                        </ListView.View>
-                                    </ListView>
-                                </xcad:LayoutAnchorable>
-                            </xcad:LayoutAnchorablePane>
-                            <!--<xcad:LayoutAnchorablePane DockHeight="100">
-                                <xcad:LayoutAnchorable ContentId="controls" Title="Controls" AutoHideWidth="240">
-                                    <Grid>
-                                        <TextBox x:Name="textboxStart" HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120"/>
-                                        <TextBox x:Name="textboxEnd" HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120" Margin="137,0,0,0"/>
-                                        <TextBox x:Name="textboxDur" HorizontalAlignment="Left" Height="23" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="120" Margin="273,0,0,0"/>
-                                    </Grid>
-                                </xcad:LayoutAnchorable>
-                            </xcad:LayoutAnchorablePane>-->
-                        </xcad:LayoutPanel>
 
-                        <xcad:LayoutAnchorablePane DockWidth="3*">
-                            <xcad:LayoutAnchorable ContentId="video" Title="Video" >
-                                <Grid x:Name="videoGrid">
-                                    <airhack:AirControl x:Name="airControl"></airhack:AirControl>
+        <Grid x:Name="timelineGrid" Grid.Row="1" Margin="0,10,0,0">
+            <local:Timeline x:Name="timeline"/>
+        </Grid>
 
-                                    <WindowsFormsHost x:Name="wfHost" Margin="0,0,0,29">
-                                        <windowsForms:Panel x:Name="PlayerHost" />
-                                    </WindowsFormsHost>
 
-                                    <Slider x:Name="slider" ValueChanged="Slider_ValueChanged" Maximum="100" IsMoveToPointEnabled="True" Height="20" VerticalAlignment="Bottom" Margin="38,0,5,4"/>
-                                    <Button x:Name="playButton" Content="►" ToolTip="Play/pause (F5)" Foreground="White" HorizontalAlignment="Left" Width="28" Click="Button_Click" Height="20" VerticalAlignment="Bottom" Margin="5,0,0,4" FontFamily="Arial"/>
-
-                                    <Grid x:Name="topGrid">
-                                        <TextBox SpellCheck.IsEnabled="True" BorderThickness="0" Background="#00000000" x:Name="overlaySubs" FontSize="18" Foreground="Yellow" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="10,10,10,55" FontFamily="Arial">
-                                            <TextBox.Text>
-                                                What do you mean? lol
-                                            </TextBox.Text>
-                                            <TextBox.Effect>
-                                                <DropShadowEffect Opacity="1" BlurRadius="1" ShadowDepth="1.2" Color="Black">
-                                                </DropShadowEffect>
-                                            </TextBox.Effect>
-                                        </TextBox>
-                                    </Grid>
-                                </Grid>
-                            </xcad:LayoutAnchorable>
-                        </xcad:LayoutAnchorablePane>
-                    </xcad:LayoutPanel>
-
-                    <xcad:LayoutPanel Orientation="Horizontal" DockHeight="220" >
-                        <xcad:LayoutAnchorablePane>
-                            <xcad:LayoutAnchorable ContentId="timeline" Title="Timeline" AutoHideWidth="240">
-                                <Grid>
-                                    <local:Timeline x:Name="timeline"/>
-                                </Grid>
-                            </xcad:LayoutAnchorable>
-                        </xcad:LayoutAnchorablePane>
-                    </xcad:LayoutPanel>
-                </xcad:LayoutPanel>
-            </xcad:LayoutRoot>
-
-        </xcad:DockingManager>
         <Menu Height="25" VerticalAlignment="Top" Background="#FF343434">
             <MenuItem Header="Project" Foreground="White">
                 <MenuItem x:Name="menuProjectNew" Header="New" InputGestureText="Ctrl+N" Foreground="Black" Click="MenuProjectNew_Click"/>

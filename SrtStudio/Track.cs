@@ -19,7 +19,6 @@ namespace SrtStudio
         Point startPos;
         bool isEditingChunk = false;
         bool afterDblClick;
-        bool draggingHeader = false;
 
         public Track(Timeline parentTimeline, bool locked)
         {
@@ -36,11 +35,10 @@ namespace SrtStudio
             ChunkUpdated += Track_ChunkUpdated;
             Items.CollectionChanged += Items_CollectionChanged;
 
-            TrackHeader.MouseMove += TrackHeader_MouseMove;
-            TrackHeader.MouseLeftButtonDown += TrackHeader_MouseLeftButtonDown;
-            TrackHeader.MouseLeftButtonUp += TrackHeader_MouseLeftButtonUp;
-            TrackHeader.MouseLeave += TrackHeader_MouseLeave;
-        }
+            TrackHeader.resizeBorder.MouseMove += ResizeBorder_MouseMove;
+            TrackHeader.resizeBorder.MouseLeftButtonDown += ResizeBorder_MouseLeftButtonDown;
+            TrackHeader.resizeBorder.MouseLeftButtonUp += ResizeBorder_MouseLeftButtonUp;
+        }        
 
         public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
 
@@ -108,67 +106,28 @@ namespace SrtStudio
             }
         }
 
-        void TrackHeader_MouseMove(object sender, MouseEventArgs e)
+        void ResizeBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            var trackHeader = (TrackHeader)sender;
-            Point position = e.GetPosition(trackHeader);
+            var resizeBorder = (Border)sender;
+            Mouse.Capture(resizeBorder);
+        }
 
-            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
-                ParentTimeline.Cursor = Cursors.SizeNS;
-            }
-            else {
-                ParentTimeline.Cursor = Cursors.Arrow;
-            }
+        void ResizeBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            Mouse.Capture(null);
+        }
 
-            if (draggingHeader == true) {
-                double deltay = position.Y - prevPos.Y;
+        void ResizeBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            Point position = e.GetPosition(TrackHeader);
 
-                trackHeader.Height += deltay;
-                TrackContent.Height = trackHeader.ActualHeight;
+            if (e.LeftButton == MouseButtonState.Pressed) {
+                double deltaY = position.Y - prevPos.Y;
+                TrackHeader.Height += deltaY;
+                TrackContent.Height += deltaY;
             }
 
             prevPos = position;
-        }
-
-        void TrackHeader_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var trackHeader = (TrackHeader)sender;
-            Point position = e.GetPosition(trackHeader);
-
-            if (IsCursorAtHeaderResizeBorder(position, trackHeader)) {
-                Mouse.Capture(trackHeader);
-                draggingHeader = true;
-            }
-        }
-
-        void TrackHeader_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (draggingHeader == true) {
-                Mouse.Capture(null);
-                draggingHeader = false;
-            }
-        }
-
-        void TrackHeader_MouseLeave(object sender, MouseEventArgs e)
-        {
-            ParentTimeline.Cursor = Cursors.Arrow;
-        }
-
-        bool IsCursorHorizontallyInHeaderBounds(Point cursorPos, TrackHeader trackHeader)
-        {
-            return cursorPos.X >= 0 && cursorPos.X <= trackHeader.ActualWidth;
-        }
-
-        bool IsCursorVerticallyAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
-        {
-            return cursorPos.Y >= trackHeader.ActualHeight - DRAG_SIZE && cursorPos.Y <= trackHeader.ActualHeight;
-        }
-
-        bool IsCursorAtHeaderResizeBorder(Point cursorPos, TrackHeader trackHeader)
-        {
-            return
-                IsCursorHorizontallyInHeaderBounds(cursorPos, trackHeader) &&
-                IsCursorVerticallyAtHeaderResizeBorder(cursorPos, trackHeader);
         }
 
         void CreateChunk(Subtitle subtitle)
@@ -254,7 +213,8 @@ namespace SrtStudio
             Point position = e.GetPosition(ParentTimeline.headerStack);
 
             //resize kurzor po najetí na kraj chunku
-            ParentTimeline.Cursor = IsCursorHorizontallyAtChunkStartBorder(chunk) ||
+            ParentTimeline.Cursor =
+                IsCursorHorizontallyAtChunkStartBorder(chunk) ||
                 IsCursorHorizontallyAtChunkEndBorder(chunk)
                 ? Cursors.SizeWE
                 : Cursors.Arrow;
