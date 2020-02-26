@@ -498,11 +498,11 @@ namespace SrtStudio
 
         void Player_PositionChanged(object sender, MpvPlayerPositionChangedEventArgs e)
         {
-            Dispatcher.Invoke(() => {
+            Dispatcher.BeginInvoke(new Action(() => {
                 if (player.IsPlaying) {
                     Seek(e.NewPosition, player);
                 }
-            });
+            }));
         }
         #endregion
 

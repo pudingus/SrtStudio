@@ -10,11 +10,9 @@ namespace SrtStudio
 {
     public class Track
     {
-        const int DRAG_SIZE = 10;
         readonly List<Subtitle> streamedItems = new List<Subtitle>();
         ObservableCollection<Subtitle> items = new ObservableCollection<Subtitle>();
         double height = 100;
-        DraggingPoint draggingPoint;
         Point prevPos;
         Point startPos;
         bool isEditingChunk = false;
@@ -35,9 +33,9 @@ namespace SrtStudio
             ChunkUpdated += Track_ChunkUpdated;
             Items.CollectionChanged += Items_CollectionChanged;
 
-            TrackHeader.resizeBorder.MouseMove += ResizeBorder_MouseMove;
-            TrackHeader.resizeBorder.MouseLeftButtonDown += ResizeBorder_MouseLeftButtonDown;
-            TrackHeader.resizeBorder.MouseLeftButtonUp += ResizeBorder_MouseLeftButtonUp;
+            TrackHeader.resizeBorder.MouseMove += Header_ResizeBorder_MouseMove;
+            TrackHeader.resizeBorder.MouseLeftButtonDown += Header_ResizeBorder_MouseLeftButtonDown;
+            TrackHeader.resizeBorder.MouseLeftButtonUp += Header_ResizeBorder_MouseLeftButtonUp;
         }        
 
         public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
@@ -45,12 +43,11 @@ namespace SrtStudio
         public event ContextMenuEventHandler ChunkContextMenuOpening;
         public event ChunkUpdatedEventHandler ChunkUpdated;
 
-        public enum DraggingPoint
+        enum ChunkBorder
         {
-            None,
             Start,
             Middle,
-            End,
+            End
         }
 
         public bool Locked { get; }
@@ -106,18 +103,19 @@ namespace SrtStudio
             }
         }
 
-        void ResizeBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        void Header_ResizeBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            var resizeBorder = (Border)sender;
-            Mouse.Capture(resizeBorder);
+            var border = (Border)sender;
+            border.CaptureMouse();
         }
 
-        void ResizeBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        void Header_ResizeBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            Mouse.Capture(null);
+            var border = (Border)sender;
+            border.ReleaseMouseCapture();
         }
 
-        void ResizeBorder_MouseMove(object sender, MouseEventArgs e)
+        void Header_ResizeBorder_MouseMove(object sender, MouseEventArgs e)
         {
             Point position = e.GetPosition(TrackHeader);
 
@@ -140,18 +138,167 @@ namespace SrtStudio
             chunk.Locked = Locked;
 
             if (!Locked) {
-                chunk.MouseMove += Chunk_MouseMove;
-                chunk.MouseLeftButtonDown += Chunk_MouseLeftButtonDown;
-                chunk.MouseLeftButtonUp += Chunk_MouseLeftButtonUp;
-                chunk.MouseRightButtonDown += Chunk_MouseRightButtonDown;
-                chunk.MouseEnter += Chunk_MouseEnter;
-                chunk.MouseLeave += Chunk_MouseLeave;
                 chunk.ContextMenuOpening += Chunk_ContextMenuOpening;
+
+                chunk.startBorder.MouseMove += StartBorder_MouseMove;
+                chunk.startBorder.MouseLeftButtonDown += StartBorder_MouseLeftButtonDown;
+                chunk.startBorder.MouseLeftButtonUp += StartBorder_MouseLeftButtonUp;
+
+                chunk.endBorder.MouseMove += EndBorder_MouseMove;
+                chunk.endBorder.MouseLeftButtonDown += EndBorder_MouseLeftButtonDown;
+                chunk.endBorder.MouseLeftButtonUp += EndBorder_MouseLeftButtonUp;
+
+                chunk.middleBorder.MouseLeftButtonDown += MiddleBorder_MouseLeftButtonDown;
+                chunk.middleBorder.MouseLeftButtonUp += MiddleBorder_MouseLeftButtonUp;
+                chunk.middleBorder.MouseMove += MiddleBorder_MouseMove;
+
             }
 
             TrackContent.Children.Add(chunk);
             subtitle.PropertyChanged += Subtitle_PropertyChanged;
             UpdateSubtitleChunk(subtitle);
+        }  
+
+        void StartBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var border = (Border)sender;
+            border.CaptureMouse();
+            startPos = e.GetPosition(ParentTimeline.headerStack);
+        }
+
+        void MiddleBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var border = (Border)sender;           
+            var chunk = (Chunk)border.DataContext;
+
+            if (e.ClickCount == 1) {
+                e.Handled = true;
+                startPos = e.GetPosition(ParentTimeline.headerStack);
+                border.CaptureMouse();
+
+                ParentTimeline.SelectedItems.Clear();
+                ParentTimeline.SelectedItems.Add(chunk.Subtitle);
+            }
+            if (e.ClickCount >= 2) {
+                border.ReleaseMouseCapture();
+                afterDblClick = true; //e.Handled nestačí
+                isEditingChunk = false;
+
+                ParentTimeline.SnapNeedleToChunkStart(chunk);
+            }
+        }
+
+        void EndBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var border = (Border)sender;
+            border.CaptureMouse();
+            startPos = e.GetPosition(ParentTimeline.headerStack);
+        }
+
+        void StartBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            var border = (Border)sender;
+            border.ReleaseMouseCapture();
+            e.Handled = true;
+            if (!isEditingChunk) {
+                var chunk = (Chunk)border.DataContext;
+                ParentTimeline.SnapNeedleToChunkStart(chunk);
+            }
+            isEditingChunk = false;
+        }
+
+        void MiddleBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (afterDblClick) {
+                afterDblClick = false;
+                e.Handled = true;  //stop routing the event to timeline mouseup, which puts needle under cursor
+            }
+            else {
+                var border = (Border)sender;
+                border.ReleaseMouseCapture();
+
+
+                isEditingChunk = false;
+            }
+        }
+        
+        void EndBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            var border = (Border)sender;
+            var chunk = (Chunk)border.DataContext;
+            border.ReleaseMouseCapture();
+            e.Handled = true;
+            if (!isEditingChunk) {  
+                ParentTimeline.SnapNeedleToChunkEnd(chunk);
+            }
+            isEditingChunk = false;
+        }
+
+
+
+        void StartBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            var border = (Border)sender;
+            var chunk = (Chunk)border.DataContext;
+            if (e.LeftButton == MouseButtonState.Pressed && border.IsMouseCaptured) {
+                TryResizeChunk(chunk, ChunkBorder.Start);
+            }
+        }
+
+        void MiddleBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            var border = (Border)sender;
+            var chunk = (Chunk)border.DataContext;
+            if (e.LeftButton == MouseButtonState.Pressed && border.IsMouseCaptured) {
+                TryResizeChunk(chunk, ChunkBorder.Middle);
+            }            
+        }
+
+        void EndBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            var border = (Border)sender;
+            var chunk = (Chunk)border.DataContext;
+            if (e.LeftButton == MouseButtonState.Pressed && border.IsMouseCaptured) {
+                TryResizeChunk(chunk, ChunkBorder.End);
+            }
+        }
+
+        void TryResizeChunk(Chunk chunk, ChunkBorder chunkBorder)
+        {
+            Point position = Mouse.GetPosition(ParentTimeline.headerStack);
+            double deltax = position.X - prevPos.X;
+            double startdeltax = position.X - startPos.X;
+            if (startdeltax >= 4.0 || startdeltax <= -4.0) {
+                //Debug.WriteLine("after point " + DateTime.Now);
+                if (isEditingChunk == false) {
+                    isEditingChunk = true;
+                    deltax += startdeltax;
+                }
+            }
+
+            if (isEditingChunk) {
+                if (chunkBorder == ChunkBorder.Start) {
+                    ResizeChunk(chunk, -deltax, deltax);
+                }
+
+                else if (chunkBorder == ChunkBorder.End) {
+                    ResizeChunk(chunk, deltax, 0);
+                }
+
+                //user is moving his mouse after he clicked in the middle of a chunk
+                if (chunkBorder == ChunkBorder.Middle) {
+                    foreach (Subtitle subtitle in ParentTimeline.SelectedItems) {
+
+                        //cant modify chunks directly, coz they might not be streamed in
+                        TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / ParentTimeline.Pixelscale * ParentTimeline.Timescale);
+                        subtitle.Start += timeDelta;
+                        subtitle.End += timeDelta;
+                    }
+                }
+            }
+
+
+            prevPos = position;
         }
 
         void UpdateSubtitleChunk(Subtitle subtitle)
@@ -205,164 +352,13 @@ namespace SrtStudio
                     UpdateSubtitleChunk(subtitle);
                     break;
             }
-        }
-
-        void Chunk_MouseMove(object sender, MouseEventArgs e)
-        {
-            var chunk = (Chunk)sender;
-            Point position = e.GetPosition(ParentTimeline.headerStack);
-
-            //resize kurzor po najetí na kraj chunku
-            ParentTimeline.Cursor =
-                IsCursorHorizontallyAtChunkStartBorder(chunk) ||
-                IsCursorHorizontallyAtChunkEndBorder(chunk)
-                ? Cursors.SizeWE
-                : Cursors.Arrow;
-
-            double deltax = position.X - prevPos.X;
-
-            if (draggingPoint != DraggingPoint.None) {
-
-                double startdeltax = position.X - startPos.X;
-                if (startdeltax >= 4.0 || startdeltax <= -4.0) {
-                    //Debug.WriteLine("after point " + DateTime.Now);
-                    if (isEditingChunk == false) {
-                        isEditingChunk = true;
-                        deltax += startdeltax;
-                    }
-                }
-
-                if (isEditingChunk) {
-                    //Debug.WriteLine($"deltax: {deltax}");
-
-                    if (draggingPoint == DraggingPoint.Start) {
-                        ResizeChunk(chunk, -deltax, deltax);
-                    }
-
-                    else if (draggingPoint == DraggingPoint.End) {
-                        ResizeChunk(chunk, deltax, 0);
-                    }
-
-                    //user is moving his mouse after he clicked in the middle of a chunk
-                    if (draggingPoint == DraggingPoint.Middle) {
-                        foreach (Subtitle subtitle in ParentTimeline.SelectedItems) {
-
-                            //cant modify chunks directly, coz they might not be streamed in
-                            TimeSpan timeDelta = TimeSpan.FromSeconds(deltax / ParentTimeline.Pixelscale * ParentTimeline.Timescale);
-                            subtitle.Start += timeDelta;
-                            subtitle.End += timeDelta;
-                        }
-                    }
-                }
-            }
-            prevPos = position;
-        }
-
-        void Chunk_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var chunk = (Chunk)sender;
-            startPos = e.GetPosition(ParentTimeline.headerStack);
-
-            if (Keyboard.Modifiers != ModifierKeys.Control) {
-
-                if (e.ClickCount == 1) {
-                    Mouse.Capture(chunk);
-
-                    if (IsCursorHorizontallyAtChunkStartBorder(chunk)) {
-                        draggingPoint = DraggingPoint.Start;
-                    }
-                    else if (IsCursorHorizontallyAtChunkEndBorder(chunk)) {
-                        draggingPoint = DraggingPoint.End;
-                    }
-                    else {
-                        draggingPoint = DraggingPoint.Middle;
-                    }
-                }
-                if (e.ClickCount >= 2) {
-                    afterDblClick = true; //e.Handled nestačí
-
-                    draggingPoint = DraggingPoint.None;
-                    isEditingChunk = false;
-                    Mouse.Capture(null);
-
-                    ParentTimeline.SnapNeedleToChunkStart(chunk);
-                }
-            }
-        }
-
-        void Chunk_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            var chunk = (Chunk)sender;
-            e.Handled = true;
-
-            //nedělat nic po puštění tl. po double clicku, ten je handled zvlášť
-            if (afterDblClick) {
-                afterDblClick = false;
-            }
-            else {
-                if (!isEditingChunk) {
-
-                    //když táhnu chunk a jsem před bodem snapu, (liberty zone) a ještě nic neroztahuju, tak po puštění ltm snapnout jehlu na začátek nebo konec chunku 
-                    if (draggingPoint == DraggingPoint.Start) {
-                        ParentTimeline.SnapNeedleToChunkStart(chunk);
-                    }
-                    else if (draggingPoint == DraggingPoint.End) {
-                        ParentTimeline.SnapNeedleToChunkEnd(chunk);
-                    }
-                    //kliknul jsem doprostřed, tak dej jehlu kam jsem kliknul
-                    else if (draggingPoint == DraggingPoint.Middle) {
-                        ParentTimeline.SnapNeedleToCursor();
-                    }
-                }
-
-                //když táhnu chunk a jsem za bodem snapu - už měním délku - tak po puštění levýho tlačítko nic dalšího nedělat
-
-                draggingPoint = DraggingPoint.None;
-                Mouse.Capture(null);
-                isEditingChunk = false;
-            }
-        }
+        } 
 
         void ResizeChunk(Chunk chunk, double addWidth, double addLeftMargin)
         {
             chunk.Width += addWidth;
             chunk.Margin = new Thickness(chunk.Margin.Left + addLeftMargin, 0, 0, 0);
             ChunkUpdated?.Invoke(this, chunk);
-        }
-
-        bool IsCursorHorizontallyAtChunkStartBorder(Chunk chunk)
-        {
-            var cursorPos = Mouse.GetPosition(chunk);
-            return cursorPos.X >= 0 && cursorPos.X <= DRAG_SIZE;
-        }
-
-        bool IsCursorHorizontallyAtChunkEndBorder(Chunk chunk)
-        {
-            var cursorPos = Mouse.GetPosition(chunk);
-            return cursorPos.X >= chunk.ActualWidth - DRAG_SIZE && cursorPos.X <= chunk.ActualWidth;
-        }
-
-        void Chunk_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var chunk = (Chunk)sender;
-            var subtitle = (Subtitle)chunk.DataContext;
-            if (!chunk.Selected) {
-                ParentTimeline.SelectedItems.Clear();
-                ParentTimeline.SelectedItems.Add(subtitle);
-            }
-        }
-
-        void Chunk_MouseEnter(object sender, MouseEventArgs e)
-        {
-            var chunk = (Chunk)sender;
-            chunk.Hilit = true;
-        }
-
-        void Chunk_MouseLeave(object sender, MouseEventArgs e)
-        {
-            var chunk = (Chunk)sender;
-            chunk.Hilit = false;
-            ParentTimeline.Cursor = Cursors.Arrow;   //cursor
         }
 
         void Chunk_ContextMenuOpening(object sender, ContextMenuEventArgs e)

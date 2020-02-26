@@ -19,6 +19,7 @@ namespace SrtStudio
         [XmlIgnore]
         public Chunk Chunk { get; set; }
 
+        [XmlIgnore]
         public int Index {
             get => index;
             set {
@@ -88,6 +89,7 @@ namespace SrtStudio
             }
         }
 
+        [XmlAttribute]
         public string Text {
             get => text;
             set {

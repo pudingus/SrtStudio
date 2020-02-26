@@ -12,22 +12,34 @@ namespace SrtStudio
         bool locked;
         bool hilit;
         bool selected;
+        readonly BrushConverter bc = new BrushConverter();
 
         public Chunk(Subtitle subtitle)
         {
             DataContext = subtitle;
+            Subtitle = subtitle;
             InitializeComponent();
             hilitBorder.Visibility = Visibility.Hidden;
             selBorder.Visibility = Visibility.Hidden;
+            endBorder.DataContext = this;
+            startBorder.DataContext = this;
+            middleBorder.DataContext = this;
         }
 
         public bool Locked {
             get => locked;
             set {
                 locked = value;
-                var bc = new BrushConverter();
-                if (locked) backRect.Fill = (Brush)bc.ConvertFrom("#FF3C3C3C");
-                else backRect.Fill = (Brush)bc.ConvertFrom("#FFA83535");
+                if (locked) {
+                    backRect.Fill = (Brush)bc.ConvertFrom("#FF3C3C3C");
+                    startBorder.IsEnabled = false;
+                    endBorder.IsEnabled = false;
+                }
+                else {
+                    backRect.Fill = (Brush)bc.ConvertFrom("#FFA83535");
+                    startBorder.IsEnabled = true;
+                    endBorder.IsEnabled = true;
+                }
             }
         }
 
@@ -47,6 +59,8 @@ namespace SrtStudio
             }
         }
 
+        public Subtitle Subtitle { get; }
+
         void Chunk_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             Size size = e.NewSize;
@@ -58,6 +72,18 @@ namespace SrtStudio
                 textBlock_dur.Visibility = Visibility.Visible;
                 textBlock_cps.Visibility = Visibility.Visible;
             }
+        }
+
+        void Chunk_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (!Locked)
+                Hilit = true;
+        }
+
+        void Chunk_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (!Locked)
+                Hilit = false;
         }
     }
 }

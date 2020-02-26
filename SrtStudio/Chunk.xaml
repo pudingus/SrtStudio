@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:SrtStudio"
              mc:Ignorable="d"
-             d:DesignHeight="100" d:DesignWidth="100" SizeChanged="Chunk_SizeChanged" HorizontalAlignment="Left" VerticalAlignment="Stretch">
+             d:DesignHeight="100" d:DesignWidth="100" SizeChanged="Chunk_SizeChanged" HorizontalAlignment="Left" VerticalAlignment="Stretch" MouseEnter="Chunk_MouseEnter" MouseLeave="Chunk_MouseLeave">
 
     <Grid>        
         <!--<Rectangle x:Name="backRect" Fill="#FF3C3C3C" Stroke="Black" StrokeThickness="1"/>-->
@@ -22,5 +22,8 @@
         <TextBlock x:Name="textBlock_dur" Foreground="White" Margin="0,0,10,23" TextWrapping="NoWrap" Text="{Binding Duration, StringFormat='{}{0:s\\,ff} s', FallbackValue='1,42 s'}" Height="16" VerticalAlignment="Bottom" TextAlignment="Right" HorizontalAlignment="Right" Width="42"/>
         <TextBlock x:Name="textBlock_cps" Foreground="White" Margin="0,0,10,7" TextWrapping="NoWrap" Text="{Binding CPS, StringFormat={}{0:N1} CPS, FallbackValue='12,43 CPS'}" Height="16" VerticalAlignment="Bottom" TextAlignment="Right" HorizontalAlignment="Right" Width="61"/>
 
+        <Border x:Name="startBorder" Background="Transparent" Width="10" HorizontalAlignment="Left" Cursor="SizeWE"/>
+        <Border x:Name="middleBorder" Background="Transparent" Margin="10,0,10,0" />
+        <Border x:Name="endBorder" Background="Transparent" Width="10" HorizontalAlignment="Right" Cursor="SizeWE"/>
     </Grid>
 </UserControl>
