@@ -80,7 +80,6 @@
     <Compile Include="TrackHeader.xaml.cs">
       <DependentUpon>TrackHeader.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Trash.cs" />
     <Page Include="AirWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

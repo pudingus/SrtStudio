@@ -161,14 +161,19 @@ namespace SrtStudio
             svHor.ScrollToHorizontalOffset(e.NewValue);
         }
 
+        void Seekbar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            SnapNeedleToCursor();
+        }
+
         void Seekbar_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed) {
-                Mouse.Capture(seekbar);
+                seekbar.CaptureMouse();
                 SnapNeedleToCursor();
             }
             else {
-                Mouse.Capture(null);
+                seekbar.ReleaseMouseCapture();
             }
         }
 
@@ -182,6 +187,6 @@ namespace SrtStudio
 
                 SnapNeedleToCursor();
             }
-        }
+        }        
     }
 }

@@ -33,7 +33,7 @@ namespace SrtStudio
         Track editTrack;
         Track refTrack;
         TextBox activeTextBox;
-        AirWindow airWindow;
+        readonly AirWindow airWindow;
 
         const string SRT_FILTER = "Srt - SubRip(*.srt)|*.srt";
         const string PROJ_EXT = "sprj";
@@ -123,7 +123,7 @@ namespace SrtStudio
         }
 
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        void Window_Loaded(object sender, RoutedEventArgs e)
         {
             wfHost.LayoutUpdated += WfHost_LayoutUpdated;
             LocationChanged += MainWindow_LocationChanged;
@@ -131,12 +131,12 @@ namespace SrtStudio
             airWindow.Show();
         }
 
-        private void MainWindow_LocationChanged(object sender, EventArgs e)
+        void MainWindow_LocationChanged(object sender, EventArgs e)
         {
             UpdateOverlay();
         }
 
-        private void WfHost_LayoutUpdated(object sender, EventArgs e)
+        void WfHost_LayoutUpdated(object sender, EventArgs e)
         {
             UpdateOverlay();
         }
