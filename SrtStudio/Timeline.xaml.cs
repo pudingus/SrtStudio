@@ -179,9 +179,9 @@ namespace SrtStudio
 
         void Timeline_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            //kliknul jsem do volnýho místa - mimo chunk - tak tam prdni jehlu
+            //clicked on free space in timeline (not on chunk), so move the needle there
 
-            //myš je napravo od headeru a není na scrollbaru                 
+            //mouse is on the right side of the header, and not over the scrollbar              
             if ((e.GetPosition(headerStack).X > headerStack.ActualWidth) &&
                 (e.GetPosition(scrollbar).Y < 0)) {
 

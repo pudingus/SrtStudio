@@ -28,12 +28,13 @@ namespace SrtStudio
     public partial class MainWindow : Window
     {
         public MpvPlayer player;
-        ContextMenu itemContextMenu;
-        ContextMenu insertContextMenu;
         Track editTrack;
         Track refTrack;
         TextBox activeTextBox;
         readonly AirWindow airWindow;
+
+        SettingsStorage settings;
+        ProjectStorage project = new ProjectStorage();
 
         const string SRT_FILTER = "Srt - SubRip(*.srt)|*.srt";
         const string PROJ_EXT = "sprj";
@@ -48,22 +49,21 @@ namespace SrtStudio
 
         public MainWindow()
         {
-            if (Instance == null) Instance = this;
             DataContext = this;
             InitializeComponent();
             OverrideLanguage();
 
-            InitPlayer();
+            player = CreatePlayer();
             UpdateTitle();
 
-            Settings.Load();
-            if (Settings.Data.Maximized) {
+            settings = Settings.Load();
+            if (settings.Maximized) {
                 WindowState = WindowState.Maximized;
             }
             RestoreBackup();
-            if (Settings.Data.SafelyExited) {
-                Settings.Data.SafelyExited = false;
-                Settings.Save();
+            if (settings.SafelyExited) {
+                settings.SafelyExited = false;
+                Settings.Save(settings);
             }
 
             airWindow = new AirWindow();            
@@ -74,12 +74,12 @@ namespace SrtStudio
             bakTimer.Tick += BakTimer_Tick;
             bakTimer.Start();
 
-            InitTimeline();
+            InitTimeline(timeline);
 
 
-            void InitPlayer()
+            MpvPlayer CreatePlayer()
             {
-                player = new MpvPlayer(playerHost.Handle) {
+                var player = new MpvPlayer(playerHost.Handle) {
                     Loop = true,
                     Volume = 100
                 };
@@ -87,21 +87,13 @@ namespace SrtStudio
                 player.API.SetPropertyString("keep-open", "yes");
                 player.PositionChanged += Player_PositionChanged;
                 player.MediaFinished += Player_MediaFinished;
-                //player.API.SetPropertyString("demuxer-max-back-bytes", "50MiB");
-                //player.API.SetPropertyString("demuxer-max-bytes", "150MiB");
-
-
-                //MessageBox.Show(player.API.GetPropertyString("cache"));
-                //MessageBox.Show(player.API.GetPropertyString("cache-secs"));
-                //MessageBox.Show(player.API.GetPropertyString("demuxer-max-back-bytes"));
-
-                //MessageBox.Show(player.API.GetPropertyString("demuxer-max-bytes"));
+                return player;
             }
 
-            void InitTimeline()
+            void InitTimeline(Timeline timeline)
             {
-                itemContextMenu = (ContextMenu)FindResource("ItemContextMenu");
-                insertContextMenu = (ContextMenu)FindResource("InsertContextMenu");
+                var itemContextMenu = (ContextMenu)FindResource("ItemContextMenu");
+                var insertContextMenu = (ContextMenu)FindResource("InsertContextMenu");
 
                 timeline.NeedleMoved += Timeline_NeedleMoved;
                 timeline.SelectedItems.CollectionChanged += Timeline_SelectedItems_CollectionChanged;
@@ -120,6 +112,49 @@ namespace SrtStudio
                     )
                 );
             }
+        }
+
+        void OpenProject(string filename, bool asBackup = false) {
+            project = Project.Read(filename, asBackup);
+            settings.LastProject = filename;
+            UpdateTitle();
+            if (!string.IsNullOrEmpty(project.VideoPath))
+                player.Load(project.VideoPath);
+
+
+            //project.Subtitles = project.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
+
+            LoadSubtitles(project.Subtitles, project.TrackName);
+            LoadRefSubtitles(project.RefSubtitles, project.RefTrackName);
+
+            Task.Delay(200).ContinueWith(t => {
+                Dispatcher.Invoke(() => {
+                    timeline.svHor.ScrollToHorizontalOffset(project.ScrollPos);
+                    Seek(TimeSpan.FromSeconds(project.VideoPos), null);
+
+                    timeline.contentStack.MinWidth = player.Duration.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
+
+                });
+            });
+
+            listView.SelectedIndex = project.SelIndex;
+        }
+
+        bool CloseProject() {
+            var projectFilename = Path.GetFileName(project.FileName);
+
+            if (project.UnsavedChanges && Dialogs.UnsavedChanges(projectFilename) == MessageBoxResult.Cancel) {
+                return false;
+            }
+
+            player.Stop();
+            player.PlaylistClear();
+            timeline.Tracks.Clear();
+            project.Subtitles = null;
+            project.RefSubtitles = null;
+            project.FileName = "Untitled closed";
+            UpdateTitle();
+            return true;
         }
 
 
@@ -152,8 +187,6 @@ namespace SrtStudio
                 airWindow.Height = wfHost.ActualHeight;
             }            
         }
-
-        public static MainWindow Instance { get; private set; }
 
         #region Public Methods
         public void LoadSubtitles(ObservableCollection<Subtitle> subtitles, string trackName)
@@ -261,9 +294,9 @@ namespace SrtStudio
 
         public void UpdateTitle()
         {
-            string currentFile = Path.GetFileName(Project.FileName);
+            string currentFile = Path.GetFileName(project.FileName);
             string star = "";
-            if (Project.UnsavedChanges) star = "*";
+            if (project.UnsavedChanges) star = "*";
             int index = 0;
             int count = 0;
             double perc = 0.0;
@@ -283,17 +316,18 @@ namespace SrtStudio
 
         void Track_ChunkUpdated(object sender, Chunk chunk)
         {
-            Project.SignalChange();
+            project.SignalChange();
             UpdateTitle();
         }
 
         void RestoreBackup()
         {
-            if (!Settings.Data.SafelyExited && Settings.Data.LastProject != null) {
-                if (Dialogs.RestoreBackup() == MessageBoxResult.Yes) {
-                    if (File.Exists(Settings.Data.LastProject + ".temp")) {
+            if (!settings.SafelyExited && settings.LastProject != null) {
+                var lastProject = Path.GetFileName(settings.LastProject);
+                if (Dialogs.RestoreBackup(lastProject) == MessageBoxResult.Yes) {
+                    if (File.Exists(settings.LastProject + ".temp")) {
                         try {
-                            Project.Open(Settings.Data.LastProject, true);
+                            OpenProject(settings.LastProject, true);
                         }
                         catch (Exception) {
                             MessageBox.Show("error");
@@ -301,7 +335,7 @@ namespace SrtStudio
                     }
                     else {
                         try {
-                            Project.Open(Settings.Data.LastProject, false);
+                            OpenProject(settings.LastProject, false);
                         }
                         catch (Exception) {
                             MessageBox.Show("error");
@@ -343,24 +377,25 @@ namespace SrtStudio
                         subtitle.Text = "-" + subtitle.Text + Environment.NewLine + "-" + nextSub.Text;
 
                     editTrack.Items.Remove(nextSub);
-                    Project.Data.Subtitles.Remove(nextSub);
+                    project.Subtitles.Remove(nextSub);
 
                     i++;
                 }
             }
             RecalculateIndexes();
 
-            Project.SignalChange();
+            project.SignalChange();
         }
         #endregion
 
         #region Events
         void BakTimer_Tick(object sender, EventArgs e)
         {
-            if (Project.UnwrittenChanges) {
+            if (project.UnwrittenChanges) {
                 try {
                     Debug.WriteLine("saving backup...");
-                    Project.Write(Project.FileName, true);
+                    Project.Write(project, project.FileName, true);
+                    settings.LastProject = project.FileName;
                 }
                 catch (IOException) {
                     MessageBox.Show("IOException Error");
@@ -463,7 +498,7 @@ namespace SrtStudio
             if (subtitle == editTrack.ItemUnderNeedle) {
                 overlaySubs.Text = subtitle.Text;
             }
-            Project.SignalChange();
+            project.SignalChange();
             UpdateTitle();
         }
 
@@ -509,7 +544,7 @@ namespace SrtStudio
         #region Menu Events
         void MenuProjectNew_Click(object sender, RoutedEventArgs e)
         {
-            Project.Close();
+            CloseProject();
             editTrack.Items.Clear();
         }
 
@@ -518,30 +553,32 @@ namespace SrtStudio
             var dialog = new OpenFileDialog {
                 Filter = PROJ_FILTER
             };
-            if (dialog.ShowDialog() == true && Project.Close()) {
-                Settings.Save();
-                Project.Open(dialog.FileName);
+            if (dialog.ShowDialog() == true && CloseProject()) {
+                Settings.Save(settings);
+                OpenProject(dialog.FileName);
             }
         }
 
         void MenuProjectSave_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(Project.FileName)) {
+            if (string.IsNullOrEmpty(project.FileName)) {
                 var dialog = new SaveFileDialog {
                     AddExtension = true,
                     DefaultExt = PROJ_EXT,
                     Filter = PROJ_FILTER
                 };
                 if (dialog.ShowDialog() == true) {
-                    Project.Write(dialog.FileName);
+                    Project.Write(project, dialog.FileName);
+                    settings.LastProject = dialog.FileName;
                     UpdateTitle();
                 }
             }
             else {
-                Project.Data.SelIndex = listView.SelectedIndex;
-                Project.Data.VideoPos = player.Position.TotalSeconds;
-                Project.Data.ScrollPos = timeline.svHor.HorizontalOffset;
-                Project.Write(Project.FileName);
+                project.SelIndex = listView.SelectedIndex;
+                project.VideoPos = player.Position.TotalSeconds;
+                project.ScrollPos = timeline.svHor.HorizontalOffset;
+                Project.Write(project, project.FileName);
+                settings.LastProject = project.FileName;
                 UpdateTitle();
             }
         }
@@ -554,14 +591,15 @@ namespace SrtStudio
                 Filter = PROJ_FILTER
             };
             if (dialog.ShowDialog() == true) {
-                Project.Write(dialog.FileName);
+                Project.Write(project, dialog.FileName);
+                settings.LastProject = dialog.FileName;
                 UpdateTitle();
             }
         }
 
         void MenuProjectClose_Click(object sender, RoutedEventArgs e)
         {
-            Project.Close();
+            CloseProject();
             editTrack.Items.Clear();
         }
 
@@ -572,7 +610,7 @@ namespace SrtStudio
             };
             if (dialog.ShowDialog() == true) {
                 player.Load(dialog.FileName);
-                Project.Data.VideoPath = dialog.FileName;
+                project.VideoPath = dialog.FileName;
                 playButton.IsEnabled = true;
                 slider.IsEnabled = true;
             }
@@ -582,7 +620,7 @@ namespace SrtStudio
         {
             player.Stop();
             player.PlaylistClear();
-            Project.Data.VideoPath = null;
+            project.VideoPath = null;
             playButton.IsEnabled = false;
             slider.IsEnabled = false;
         }
@@ -593,9 +631,9 @@ namespace SrtStudio
                 Filter = SRT_FILTER
             };
             if (dialog.ShowDialog() == true) {
-                Project.Data.Subtitles = Srt.Read(dialog.FileName);
-                Project.Data.TrackName = dialog.SafeFileName;
-                LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
+                project.Subtitles = Srt.Read(dialog.FileName);
+                project.TrackName = dialog.SafeFileName;
+                LoadSubtitles(project.Subtitles, project.TrackName);
             }
         }
 
@@ -605,9 +643,9 @@ namespace SrtStudio
                 Filter = SRT_FILTER
             };
             if (dialog.ShowDialog() == true) {
-                Project.Data.RefSubtitles = Srt.Read(dialog.FileName);
-                Project.Data.RefTrackName = dialog.SafeFileName;
-                LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
+                project.RefSubtitles = Srt.Read(dialog.FileName);
+                project.RefTrackName = dialog.SafeFileName;
+                LoadRefSubtitles(project.RefSubtitles, project.RefTrackName);
             }
         }
 
@@ -619,7 +657,7 @@ namespace SrtStudio
                 Filter = SRT_FILTER
             };
             if (dialog.ShowDialog() == true) {
-                Srt.Write(dialog.FileName, Project.Data.Subtitles);
+                Srt.Write(dialog.FileName, project.Subtitles);
             }
         }
 
@@ -642,19 +680,20 @@ namespace SrtStudio
         #region Window Events
         void Window_Closing(object sender, CancelEventArgs e)
         {
-            if (Project.UnsavedChanges) {
-                var result = Dialogs.UnsavedChanges();
+            if (project.UnsavedChanges) {
+                var projectFilename = Path.GetFileName(project.FileName);
+                var result = Dialogs.UnsavedChanges(projectFilename);
                 if (result == MessageBoxResult.Cancel) {
                     e.Cancel = true;
                     return;
                 }
                 else if (result == MessageBoxResult.No) {
                     if (WindowState == WindowState.Maximized) {
-                        Settings.Data.Maximized = true;
+                        settings.Maximized = true;
                     }
                 }
                 else if (result ==  MessageBoxResult.Yes) {
-                    if (string.IsNullOrEmpty(Project.FileName)) {
+                    if (string.IsNullOrEmpty(project.FileName)) {
                         var dialog = new SaveFileDialog {
                             AddExtension = true,
                             DefaultExt = PROJ_EXT,
@@ -662,7 +701,8 @@ namespace SrtStudio
                         };
                         if (dialog.ShowDialog() == true) {
                             try {
-                                Project.Write(dialog.FileName);
+                                Project.Write(project, dialog.FileName);
+                                settings.LastProject = dialog.FileName;
                             }
                             catch (IOException ex) {
                                 MessageBox.Show(ex.Message, "error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -672,11 +712,12 @@ namespace SrtStudio
                         }
                     }
                     else {
-                        Project.Data.SelIndex = listView.SelectedIndex;
-                        Project.Data.VideoPos = player.Position.TotalSeconds;
-                        Project.Data.ScrollPos = timeline.svHor.HorizontalOffset;
+                        project.SelIndex = listView.SelectedIndex;
+                        project.VideoPos = player.Position.TotalSeconds;
+                        project.ScrollPos = timeline.svHor.HorizontalOffset;
                         try {
-                            Project.Write(Project.FileName);
+                            Project.Write(project, project.FileName);
+                            settings.LastProject = project.FileName;
                         }
                         catch (IOException ex) {
                             MessageBox.Show(ex.Message, "error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -685,19 +726,19 @@ namespace SrtStudio
                         }
                     }
                     if (WindowState == WindowState.Maximized) {
-                        Settings.Data.Maximized = true;
+                        settings.Maximized = true;
                     }
-                    Settings.Data.SafelyExited = true;
-                    Settings.Save();
+                    settings.SafelyExited = true;
+                    Settings.Save(settings);
                 }
             }
 
-            Settings.Data.SafelyExited = true;
-            Settings.Save();
+            settings.SafelyExited = true;
+            Settings.Save(settings);
 
-            if (string.IsNullOrEmpty(Project.FileName)) MessageBox.Show("empty project.filename");
+            if (string.IsNullOrEmpty(project.FileName)) MessageBox.Show("empty project.filename");
             else {
-                var tempFile = Project.FileName + ".temp";
+                var tempFile = project.FileName + ".temp";
                 if (File.Exists(tempFile)) File.Delete(tempFile);
             }
         }
@@ -780,11 +821,11 @@ namespace SrtStudio
                 if (dur < TimeSpan.FromSeconds(1.2)) {
                     MessageBox.Show("too short, correcting...");
                     subtitle.End = subtitle.Start + TimeSpan.FromSeconds(1.2);
-                    Project.SignalChange();
+                    project.SignalChange();
                 }
                 else {
                     subtitle.End = timeline.Position;
-                    Project.SignalChange();
+                    project.SignalChange();
                 }
             }
         }
@@ -809,7 +850,7 @@ namespace SrtStudio
                     End = player.Position + TimeSpan.FromSeconds(1.5),
                     Text = string.Empty
                 };
-                Project.Data.Subtitles.Insert(beforeNeedle.Index, sub);
+                project.Subtitles.Insert(beforeNeedle.Index, sub);
 
                 var subtitle = new Subtitle();
                 editTrack.Items.Insert(beforeNeedle.Index, subtitle);
@@ -821,7 +862,7 @@ namespace SrtStudio
                 listView.SelectedItems.Add(subtitle);
                 //subtitle.Selected = true;
 
-                Project.SignalChange();
+                project.SignalChange();
             }
         }
         #endregion
@@ -849,11 +890,11 @@ namespace SrtStudio
 
             foreach (Subtitle subtitle in copy) {
                 editTrack.Items.Remove(subtitle);
-                Project.Data.Subtitles.Remove(subtitle);
+                project.Subtitles.Remove(subtitle);
                 editTrack.Items.Remove(subtitle);
             }
             RecalculateIndexes();
-            Project.SignalChange();
+            project.SignalChange();
         }
 
         void PrepareContextMenu(Subtitle subtitle, ContextMenu contextMenu)

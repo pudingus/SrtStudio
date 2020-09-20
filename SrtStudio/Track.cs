@@ -10,6 +10,12 @@ namespace SrtStudio
 {
     public class Track
     {
+        public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
+
+        public event ContextMenuEventHandler ChunkContextMenuOpening;
+        public event ChunkUpdatedEventHandler ChunkUpdated;
+
+
         readonly List<Subtitle> streamedItems = new List<Subtitle>();
         ObservableCollection<Subtitle> items = new ObservableCollection<Subtitle>();
         double height = 100;
@@ -17,6 +23,13 @@ namespace SrtStudio
         Point startPos;
         bool isEditingChunk = false;
         bool afterDblClick;
+
+        public bool Locked { get; }
+        public ReadOnlyCollection<Subtitle> StreamedItems => streamedItems.AsReadOnly();
+        public Subtitle ItemUnderNeedle { get; set; }
+        public TrackHeader TrackHeader { get; }
+        public Grid TrackContent { get; }
+        public Timeline ParentTimeline { get; }
 
         public Track(Timeline parentTimeline, bool locked)
         {
@@ -36,12 +49,7 @@ namespace SrtStudio
             TrackHeader.resizeBorder.MouseMove += Header_ResizeBorder_MouseMove;
             TrackHeader.resizeBorder.MouseLeftButtonDown += Header_ResizeBorder_MouseLeftButtonDown;
             TrackHeader.resizeBorder.MouseLeftButtonUp += Header_ResizeBorder_MouseLeftButtonUp;
-        }        
-
-        public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
-
-        public event ContextMenuEventHandler ChunkContextMenuOpening;
-        public event ChunkUpdatedEventHandler ChunkUpdated;
+        } 
 
         enum ChunkBorder
         {
@@ -49,13 +57,6 @@ namespace SrtStudio
             Middle,
             End
         }
-
-        public bool Locked { get; }
-        public ReadOnlyCollection<Subtitle> StreamedItems => streamedItems.AsReadOnly();
-        public Subtitle ItemUnderNeedle { get; set; }
-        public TrackHeader TrackHeader { get; }
-        public Grid TrackContent { get; }
-        public Timeline ParentTimeline { get; }
 
         public ObservableCollection<Subtitle> Items {
             get => items;
@@ -209,9 +210,11 @@ namespace SrtStudio
 
         void MiddleBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            if (isEditingChunk) e.Handled = true;  //stop routing the event to timeline mouseup, which puts needle under cursor
+
             if (afterDblClick) {
                 afterDblClick = false;
-                e.Handled = true;  //stop routing the event to timeline mouseup, which puts needle under cursor
+                
             }
             else {
                 var border = (Border)sender;

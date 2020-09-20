@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.IO;
 using System.Xml.Serialization;
 
@@ -14,15 +15,15 @@ namespace SrtStudio
 
     public static class Settings
     {
-        public static SettingsStorage Data { get; private set; } = new SettingsStorage();
-        const string filename = "settings.xml";
+        const string FILENAME = "settings.xml";
 
-        public static void Load()
+        public static SettingsStorage Load()
         {
+            SettingsStorage settings = null;
             try {
-                using (var sr = new StreamReader(filename)) {
+                using (var sr = new StreamReader(FILENAME)) {
                     var xmls = new XmlSerializer(typeof(SettingsStorage));
-                    Data = xmls.Deserialize(sr) as SettingsStorage;
+                    settings = xmls.Deserialize(sr) as SettingsStorage;
                 }
             }
             catch (FileNotFoundException ex) {
@@ -40,14 +41,17 @@ namespace SrtStudio
             catch (Exception ex) {
                 Console.WriteLine(ex.Message);
             }
-
+            if (settings == null) {
+                settings = new SettingsStorage();
+            }
+            return settings;
         }
 
-        public static void Save()
+        public static void Save(SettingsStorage settings)
         {
-            using (var sw = new StreamWriter(filename)) {
+            using (var sw = new StreamWriter(FILENAME)) {
                 var xmls = new XmlSerializer(typeof(SettingsStorage));
-                xmls.Serialize(sw, Data);
+                xmls.Serialize(sw, settings);
             }
         }
     }

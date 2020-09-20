@@ -18,6 +18,19 @@ namespace SrtStudio
         public double VideoPos { get; set; }
         public double ScrollPos { get; set; }
         public int SelIndex { get; set; }
+
+        [XmlIgnore]
+        public string FileName { get; set; } = "Untitled";
+        [XmlIgnore]
+        public bool UnsavedChanges { get; set; }
+        [XmlIgnore]
+        public bool UnwrittenChanges { get; set; }
+
+
+        public void SignalChange() {
+            UnsavedChanges = true;
+            UnwrittenChanges = true;
+        }
     }
 
     public static class Project
@@ -25,70 +38,29 @@ namespace SrtStudio
         /// <summary>
         /// Full path
         /// </summary>
-        public static string FileName { get; private set; } = "Untitled";
-        public static ProjectStorage Data { get; set; } = new ProjectStorage();
-        public static bool UnsavedChanges { get; private set; }
-        public static bool UnwrittenChanges { get; private set; }
 
-        public static void Open(string filename, bool asBackup = false)
+
+        public static ProjectStorage Read(string filename, bool asBackup = false)
         {
-            var mainWindow = MainWindow.Instance;
+            if (filename == null) throw new ArgumentNullException(nameof(filename));
 
-            Project.Read(filename, asBackup);
-            mainWindow.UpdateTitle();
-            if (!string.IsNullOrEmpty(Project.Data.VideoPath))
-                mainWindow.player.Load(Project.Data.VideoPath);
-
-
-            //Project.Data.Subtitles = Project.Data.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
-
-            mainWindow.LoadSubtitles(Project.Data.Subtitles, Project.Data.TrackName);
-            mainWindow.LoadRefSubtitles(Project.Data.RefSubtitles, Project.Data.RefTrackName);
-
-            Task.Delay(200).ContinueWith(t => {
-                mainWindow.Dispatcher.Invoke(() => {
-                    mainWindow.timeline.svHor.ScrollToHorizontalOffset(Project.Data.ScrollPos);
-                    mainWindow.Seek(TimeSpan.FromSeconds(Project.Data.VideoPos), null);
-
-                    mainWindow.timeline.contentStack.MinWidth = mainWindow.player.Duration.TotalSeconds / mainWindow.timeline.Timescale * mainWindow.timeline.Pixelscale;
-
-                });
-            });
-
-            mainWindow.listView.SelectedIndex = Project.Data.SelIndex;
-        }
-
-        public static bool Close()
-        {
-            var mainWindow = MainWindow.Instance;
-
-            if (Project.UnsavedChanges && Dialogs.UnsavedChanges() == MessageBoxResult.Cancel) {
-                return false;
-            }
-
-            mainWindow.player.Stop();
-            mainWindow.player.PlaylistClear();
-            mainWindow.timeline.Tracks.Clear();
-            Project.Data.Subtitles = null;
-            Project.Data.RefSubtitles = null;
-            Project.FileName = "Untitled closed";
-            mainWindow.UpdateTitle();
-            return true;
-        }
-
-        private static void Read(string filename, bool asBackup = false)
-        {
+            ProjectStorage project = null;
             var ser = new XmlSerializer(typeof(ProjectStorage));
-
-            Settings.Data.LastProject = filename;
 
             using (FileStream stream = File.OpenRead(asBackup ? filename+".temp" : filename)) {
                 using (var zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
-                    Data = ser.Deserialize(zipStream) as ProjectStorage;
-                    FileName = filename;
-                    if (asBackup) UnsavedChanges = true;
+                    project = ser.Deserialize(zipStream) as ProjectStorage;                    
                 }
             }
+
+            if (project == null) {
+                project = new ProjectStorage();
+            }
+            else {
+                project.FileName = filename;
+                if (asBackup) project.UnsavedChanges = true;
+            }
+            return project;
         }
 
         /// <summary>
@@ -104,44 +76,23 @@ namespace SrtStudio
         /// <exception cref="IOException"></exception>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public static void Write(string filename, bool asBackup = false)
+        public static void Write(ProjectStorage project, string filename, bool asBackup = false)
         {
-            var ser = new XmlSerializer(typeof(ProjectStorage));
+            if (project == null) throw new ArgumentNullException(nameof(project));
+            if (filename == null) throw new ArgumentNullException(nameof(filename));
 
-            Settings.Data.LastProject = filename;
+            var ser = new XmlSerializer(typeof(ProjectStorage));
 
             using (FileStream stream = File.Create(asBackup ? filename + ".temp" : filename)) {
                 using (var zipStream = new GZipStream(stream, CompressionMode.Compress)) {
-                    ser.Serialize(zipStream, Data);
-                    FileName = filename;
-                    if (!asBackup) UnsavedChanges = false;
-                    UnwrittenChanges = false;
+                    ser.Serialize(zipStream, project);
+                    project.FileName = filename;
+                    if (!asBackup) project.UnsavedChanges = false;
+                    project.UnwrittenChanges = false;
                 }
             }
         }
 
-        public static void SignalChange()
-        {
-            UnsavedChanges = true;
-            UnwrittenChanges = true;
-        }
 
-        //static string appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        //static string backupPath = Path.Combine(appdata, Local.ProgramName, "backup");
-
-        //public static void Backup() {
-        //    string name = Path.GetFileName(FileName);
-        //    string filepath = Path.Combine(backupPath, name);
-
-        //    XmlSerializer ser = new XmlSerializer(typeof(ProjectStorage));
-
-
-        //    using (FileStream stream = File.Create(filepath)) {
-        //        using (GZipStream zipStream = new GZipStream(stream, CompressionMode.Compress)) {
-        //            ser.Serialize(zipStream, Data);
-        //            UnwrittenChanges = false;
-        //        }
-        //    }
-        //}
     }
 }

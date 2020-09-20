@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 	<UseWPF>true</UseWPF>
-	<Platforms>AnyCPU;x86</Platforms>
+	<Platforms>x86</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="libmpv.win-x86" Version="0.29.1" />

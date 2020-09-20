@@ -5,11 +5,11 @@ namespace SrtStudio
 {
     public class Dialogs
     {
-        public static MessageBoxResult UnsavedChanges()
+        public static MessageBoxResult UnsavedChanges(string projectFilename)
         {
             var result =
                 MessageBox.Show(
-                    $"Do you want to save changes you made to {Path.GetFileName(Project.FileName)}? \n\nYour changes will be lost if you don't save them.",
+                    $"Do you want to save changes you made to {projectFilename}? \n\nYour changes will be lost if you don't save them.",
                     "Save changes?",
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Exclamation
@@ -17,11 +17,11 @@ namespace SrtStudio
             return result;
         }
 
-        public static MessageBoxResult RestoreBackup()
+        public static MessageBoxResult RestoreBackup(string lastProject)
         {
             var result =
                 MessageBox.Show(
-                    $"Program didn't safely exit last time, \ndo you want to restore {Path.GetFileName(Settings.Data.LastProject)}?",
+                    $"Program didn't safely exit last time, \ndo you want to restore {lastProject}?",
                     "Restore",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning
