@@ -102,17 +102,17 @@ namespace SrtStudio
         }
 
         [XmlIgnore]
-        public bool Enabled {
+        public bool TbxEnabled {
             get => enabled;
             set {
                 if (value != enabled) {
                     enabled = value;
-                    RaisePropertyChanged(nameof(Enabled));
+                    RaisePropertyChanged(nameof(TbxEnabled));
                 }
             }
         }
 
-        public void RaisePropertyChanged(string propertyName)
+        private void RaisePropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

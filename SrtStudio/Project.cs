@@ -10,17 +10,17 @@ namespace SrtStudio
 {
     public class ProjectStorage
     {
-        public string VideoPath { get; set; }
-        public string TrackName { get; set; }
-        public ObservableCollection<Subtitle> Subtitles { get; set; }
-        public string RefTrackName { get; set; }
-        public ObservableCollection<Subtitle> RefSubtitles { get; set; }
+        public string VideoPath { get; set; } = "";
+        public string TrackName { get; set; } = "";
+        public ObservableCollection<Subtitle> Subtitles { get; set; } = new ObservableCollection<Subtitle>();
+        public string RefTrackName { get; set; } = "";
+        public ObservableCollection<Subtitle> RefSubtitles { get; set; } = new ObservableCollection<Subtitle>();
         public double VideoPos { get; set; }
         public double ScrollPos { get; set; }
         public int SelIndex { get; set; }
 
         [XmlIgnore]
-        public string FileName { get; set; } = "Untitled";
+        public string FileName { get; set; }
         [XmlIgnore]
         public bool UnsavedChanges { get; set; }
         [XmlIgnore]

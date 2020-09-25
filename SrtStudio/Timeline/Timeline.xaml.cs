@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Markup;
 
 namespace SrtStudio
 {
@@ -13,7 +16,7 @@ namespace SrtStudio
     /// </summary>
     public partial class Timeline : UserControl
     {
-        public Timeline()
+        public Timeline() 
         {
             InitializeComponent();
             SelectedItems.CollectionChanged += SelectedItems_CollectionChanged;
@@ -23,7 +26,7 @@ namespace SrtStudio
         public delegate void NeedleMovedEventHandler(object sender);
         public event NeedleMovedEventHandler NeedleMoved;
 
-        public int Timescale => 10;   //one page is 'scale' (30) seconds
+        public int Timescale => 10;   //how many seconds to fit in one page
         public int Pixelscale => 1000;
         public bool Ripple { get; set; }
         public ContextMenu ChunkContextMenu { get; set; }
@@ -32,47 +35,51 @@ namespace SrtStudio
 
         public TimeSpan Position {
             get {
-                double start = needle.Margin.Left / Pixelscale * Timescale;
-                return TimeSpan.FromSeconds(start);
+                return PixelsToTime(needle.Margin.Left);
             }
             set {
-                double margin = value.TotalSeconds / Timescale * Pixelscale;
+                var margin = TimeToPixels(value);
                 needle.Margin = new Thickness(margin, 0, 0, 0);
-
-                var position = value;
-                foreach (Track track in Tracks) {
-                    foreach (Subtitle subtitle in track.Items) {
-                        if (position >= subtitle.Start && position <= subtitle.End) {
-                            track.ItemUnderNeedle = subtitle;
-                            break;
-                        }
-                    }
-                }
             }
         }
 
-        public void RevealNeedle()
-        {
+        public double HorizontalOffset {
+            get => svHor.HorizontalOffset;
+            set => svHor.ScrollToHorizontalOffset(value);
+        }
+
+        public void RevealNeedle() {
             needle.BringIntoView(new Rect(new Size(50, 50)));
         }
 
-        public void SnapNeedleToCursor()
-        {
+        public void SnapNeedleToCursor() {
             Point position = Mouse.GetPosition(contentStack);
             needle.Margin = new Thickness(position.X, 0, 0, 0);
             NeedleMoved?.Invoke(this);
         }
 
-        public void SnapNeedleToChunkEnd(Chunk chunk)
-        {
+        public void SnapNeedleToChunkEnd(Chunk chunk) {
             needle.Margin = new Thickness(chunk.Margin.Left + chunk.Width, 0, 0, 0);
             NeedleMoved?.Invoke(this);
         }
 
-        public void SnapNeedleToChunkStart(Chunk chunk)
-        {
+        public void SnapNeedleToChunkStart(Chunk chunk) {
             needle.Margin = new Thickness(chunk.Margin.Left, 0, 0, 0);
             NeedleMoved?.Invoke(this);
+        }
+
+        public TimeSpan PixelsToTime(double pixels) {
+            var pixelscale = Pixelscale;
+            var timescale = Timescale;
+
+            return TimeSpan.FromSeconds(pixels / pixelscale * timescale);
+        }
+
+        public double TimeToPixels(TimeSpan time) {
+            var timescale = Timescale;
+            var pixelscale = Pixelscale;
+
+            return (time.TotalSeconds / timescale * pixelscale);
         }
 
         void Tracks_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -166,6 +173,10 @@ namespace SrtStudio
             SnapNeedleToCursor();
         }
 
+        void Seekbar_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+            e.Handled = true;
+        }
+
         void Seekbar_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed) {
@@ -187,6 +198,8 @@ namespace SrtStudio
 
                 SnapNeedleToCursor();
             }
-        }        
+
+            SelectedItems.Clear();
+        }
     }
 }

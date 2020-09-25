@@ -12,6 +12,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Threading;
@@ -28,13 +29,11 @@ namespace SrtStudio
     public partial class MainWindow : Window
     {
         public MpvPlayer player;
-        Track editTrack;
-        Track refTrack;
         TextBox activeTextBox;
-        readonly AirWindow airWindow;
+        readonly AirWindow airWindow = new AirWindow();
 
         SettingsStorage settings;
-        ProjectStorage project = new ProjectStorage();
+        ProjectStorage project;
 
         const string SRT_FILTER = "Srt - SubRip(*.srt)|*.srt";
         const string PROJ_EXT = "sprj";
@@ -47,35 +46,40 @@ namespace SrtStudio
             Interval = TimeSpan.FromSeconds(10)
         };
 
+        //readonly MainViewModel viewModel = new MainViewModel();
+        readonly MainViewModel viewModel;
+
         public MainWindow()
         {
-            DataContext = this;
             InitializeComponent();
-            OverrideLanguage();
+            //DataContext = viewModel;
+            viewModel = (MainViewModel)DataContext;
+            airWindow.DataContext = viewModel;
 
-            player = CreatePlayer();
-            UpdateTitle();
+            OverrideLanguage();                       
 
             settings = Settings.Load();
             if (settings.Maximized) {
                 WindowState = WindowState.Maximized;
             }
-            RestoreBackup();
+
+            player = CreatePlayer();
+            project = RestoreBackup(settings);
+
             if (settings.SafelyExited) {
                 settings.SafelyExited = false;
                 Settings.Save(settings);
             }
 
-            airWindow = new AirWindow();            
+            Title = GetTitle(project, listView.SelectedIndex);
+
+            InitTimeline(timeline);
 
             playerGrid.Children.Remove(overlayGrid);
             airWindow.contentGrid.Children.Add(overlayGrid);
 
             bakTimer.Tick += BakTimer_Tick;
             bakTimer.Start();
-
-            InitTimeline(timeline);
-
 
             MpvPlayer CreatePlayer()
             {
@@ -87,6 +91,7 @@ namespace SrtStudio
                 player.API.SetPropertyString("keep-open", "yes");
                 player.PositionChanged += Player_PositionChanged;
                 player.MediaFinished += Player_MediaFinished;
+                player.MediaLoaded += Player_MediaLoaded;
                 return player;
             }
 
@@ -100,6 +105,20 @@ namespace SrtStudio
                 timeline.ChunkContextMenu = itemContextMenu;
 
                 timeline.ContextMenu = insertContextMenu;
+
+                var refTrack = new Track(timeline, true) {
+                    Height = 50,
+                    Name = ""
+                };
+
+                var editTrack = new Track(timeline, false) {
+                    Name = ""
+                };
+
+                timeline.Tracks.Add(refTrack);
+                timeline.Tracks.Add(editTrack);
+
+                editTrack.ChunkContextMenuOpening += Track_ChunkContextMenuOpening;
             }
 
             void OverrideLanguage()
@@ -114,66 +133,109 @@ namespace SrtStudio
             }
         }
 
-        void OpenProject(string filename, bool asBackup = false) {
-            project = Project.Read(filename, asBackup);
+        ProjectStorage OpenProject(string filename, bool asBackup = false) {
+            var project = Project.Read(filename, asBackup);
             settings.LastProject = filename;
-            UpdateTitle();
+            Title = GetTitle(project, project.SelIndex);
             if (!string.IsNullOrEmpty(project.VideoPath))
                 player.Load(project.VideoPath);
 
-
             //project.Subtitles = project.Subtitles.OrderBy(subtitle => subtitle.Start).ToList();
 
-            LoadSubtitles(project.Subtitles, project.TrackName);
-            LoadRefSubtitles(project.RefSubtitles, project.RefTrackName);
+            RecalculateIndexes(project.Subtitles);
+            RecalculateIndexes(project.RefSubtitles);
+
+            LoadSubtitles(project, timeline);
+            LoadRefSubtitles(project, timeline);
 
             Task.Delay(200).ContinueWith(t => {
                 Dispatcher.Invoke(() => {
-                    timeline.svHor.ScrollToHorizontalOffset(project.ScrollPos);
+                    timeline.HorizontalOffset = project.ScrollPos;
                     Seek(TimeSpan.FromSeconds(project.VideoPos), null);
-
-                    timeline.contentStack.MinWidth = player.Duration.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
-
                 });
             });
 
+
+            timeline.SelectedItems.CollectionChanged -= Timeline_SelectedItems_CollectionChanged;
+            listView.SelectionChanged -= ListView_SelectionChanged;
+            timeline.SelectedItems.Add(project.Subtitles[project.SelIndex]);
             listView.SelectedIndex = project.SelIndex;
+            listView.SelectionChanged += ListView_SelectionChanged;
+            timeline.SelectedItems.CollectionChanged += Timeline_SelectedItems_CollectionChanged;
+
+            return project;
+        }
+
+        ProjectStorage RestoreBackup(SettingsStorage settings) {
+            ProjectStorage project = null;
+            if (!settings.SafelyExited && settings.LastProject != null) {
+                var lastProject = Path.GetFileName(settings.LastProject);
+                if (Dialogs.RestoreBackup(lastProject) == MessageBoxResult.Yes) {
+                    if (File.Exists(settings.LastProject + ".temp")) {
+                        try {
+                            project = OpenProject(settings.LastProject, true);
+                        }
+                        catch (Exception) {
+                            MessageBox.Show("error");
+                        }
+                    }
+                    else {
+                        try {
+                            project = OpenProject(settings.LastProject, false);
+                        }
+                        catch (Exception) {
+                            MessageBox.Show("error");
+                        }
+                    }
+                }
+            }
+            if (project == null) project = new ProjectStorage();
+            return project;
+        }
+
+        void LoadSubtitles(ProjectStorage project, Timeline timeline) {
+            var editTrack = timeline.Tracks[1];
+
+            viewModel.Items = project.Subtitles;
+            editTrack.Items = project.Subtitles;
+            editTrack.Name = project.TrackName;
+
+            project.Subtitles.CollectionChanged += Subtitles_CollectionChanged;
+
+            foreach (Subtitle sub in project.Subtitles) {
+                sub.PropertyChanged += Subtitle_PropertyChanged;
+            }
+        }
+
+        void LoadRefSubtitles(ProjectStorage project, Timeline timeline) {
+            var refTrack = timeline.Tracks[0];
+            refTrack.Items = project.RefSubtitles;
+            refTrack.Name = project.RefTrackName;
         }
 
         bool CloseProject() {
             var projectFilename = Path.GetFileName(project.FileName);
 
-            if (project.UnsavedChanges && Dialogs.UnsavedChanges(projectFilename) == MessageBoxResult.Cancel) {
+            if (project.UnsavedChanges && Dialogs.SaveChanges(projectFilename) == MessageBoxResult.Cancel) {
                 return false;
             }
 
+            var refTrack = timeline.Tracks[0];
+            var editTrack = timeline.Tracks[1];
+
+            refTrack.Items.Clear();
+            editTrack.Items.Clear();
+
+            refTrack.Name = "";
+            editTrack.Name = "";
+
             player.Stop();
             player.PlaylistClear();
-            timeline.Tracks.Clear();
-            project.Subtitles = null;
-            project.RefSubtitles = null;
-            project.FileName = "Untitled closed";
-            UpdateTitle();
+            project = new ProjectStorage();
+            viewModel.Items = project.Subtitles;
+            viewModel.ActiveItem = null;
+            Title = GetTitle(project, listView.SelectedIndex);
             return true;
-        }
-
-
-        void Window_Loaded(object sender, RoutedEventArgs e)
-        {
-            wfHost.LayoutUpdated += WfHost_LayoutUpdated;
-            LocationChanged += MainWindow_LocationChanged;
-            airWindow.Owner = this;
-            airWindow.Show();
-        }
-
-        void MainWindow_LocationChanged(object sender, EventArgs e)
-        {
-            UpdateOverlay();
-        }
-
-        void WfHost_LayoutUpdated(object sender, EventArgs e)
-        {
-            UpdateOverlay();
         }
 
         void UpdateOverlay()
@@ -186,55 +248,37 @@ namespace SrtStudio
                 airWindow.Width = wfHost.ActualWidth;
                 airWindow.Height = wfHost.ActualHeight;
             }            
+        }      
+
+        void SignalChange(ProjectStorage project) {
+            project.SignalChange();
+            Title = GetTitle(project, listView.SelectedIndex);
         }
 
-        #region Public Methods
-        public void LoadSubtitles(ObservableCollection<Subtitle> subtitles, string trackName)
-        {
-            if (editTrack != null) {
-                editTrack.Items.Clear();
-                timeline.Tracks.Remove(editTrack);
+        Subtitle GetItemUnderNeedle(TimeSpan position, IList<Subtitle> subtitles) {
+            Subtitle underNeedle = null;
+
+            foreach (Subtitle subtitle in subtitles) {
+                if (position >= subtitle.Start && position <= subtitle.End) {
+                    underNeedle = subtitle;
+                    break;
+                }
             }
-
-            if (subtitles.Count <= 0) return;
-
-            var track = new Track(timeline, false) {
-                Name = trackName,
-                Items = subtitles
-            };
-            editTrack = track;
-            timeline.Tracks.Add(track);
-
-            track.ChunkContextMenuOpening += Track_ChunkContextMenuOpening;
-            track.ChunkUpdated += Track_ChunkUpdated;
-
-            //assign items to listview
-            listView.ItemsSource = subtitles;
-
-            //ensure minimal width of the timeline
-            Subtitle lastSub = subtitles[editTrack.Items.Count-1];
-            double margin = lastSub.Start.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
-            double width = lastSub.Duration.TotalSeconds / timeline.Timescale * timeline.Pixelscale;
-            timeline.seekbar.MinWidth = margin + width;
+            return underNeedle;
         }
 
-        public void LoadRefSubtitles(ObservableCollection<Subtitle> subtitles, string trackName)
-        {
-            if (refTrack != null)
-                timeline.Tracks.Remove(refTrack);
-
-            if (subtitles.Count <= 0) return;
-
-            var track = new Track(timeline, true) {
-                Name = trackName,
-                Height = 50,
-                Items = subtitles
-            };
-            refTrack = track;
-            timeline.Tracks.Insert(0, track);
+        Subtitle FindSubtitleBefore(TimeSpan position, IList<Subtitle> items) {
+            Subtitle beforeNeedle = null;
+            for (int index = items.Count - 1; index >= 0; --index) {
+                if (position >= items[index].Start) {
+                    beforeNeedle = items[index];
+                    break;
+                }
+            }
+            return beforeNeedle;
         }
 
-        public void Seek(TimeSpan position, object except = null)
+        void Seek(TimeSpan position, object except = null)
         {
             if (position.TotalMilliseconds < 0) position = TimeSpan.FromSeconds(0);
             slider.ValueChanged -= Slider_ValueChanged;
@@ -252,122 +296,75 @@ namespace SrtStudio
 
             if (except != player) {
                 if (player.IsMediaLoaded) {
-                    //player.SeekAsync(position);
-                    player.Position = position;
+                    if (position > player.Duration) player.Position = player.Duration;
+                    else player.Position = position;
                 }
             }
 
-            string text = string.Empty;
+            Subtitle underNeedle = GetItemUnderNeedle(position, project.Subtitles);  
 
-            if (editTrack != null) {
-                foreach (Subtitle subtitle in editTrack.Items) {
-                    if (position >= subtitle.Start && position <= subtitle.End) {
-                        if (player.IsPlaying) {
-                            listView.SelectionMode = SelectionMode.Single;
-                            listView.SelectedItem = subtitle;
-                            listView.SelectionMode = SelectionMode.Extended;
-                            /*
-                            Task.Delay(100).ContinueWith(t => {
-                                Dispatcher.Invoke(() => {
-                                    //listView.ScrollIntoView(subtitle);
-                                });
-                            });
-                            */
-                        }
-                        text = subtitle.Text;
-                        break;
-                    }
-                }
-            }
-            
-            overlaySubs.Text = text;
+            if (underNeedle != null && player.IsPlaying) {
+                listView.SelectionMode = SelectionMode.Single;
+                listView.SelectedItem = underNeedle;
+                listView.SelectionMode = SelectionMode.Extended;
+            }            
+
+            viewModel.ActiveItem = underNeedle;
 
             slider.ValueChanged += Slider_ValueChanged;
             timeline.NeedleMoved += Timeline_NeedleMoved;
         }
 
-        public void Seek(double offset)
+        void Seek(double offset)
         {
             var newPos = player.Position + TimeSpan.FromMilliseconds(offset);
             Seek(newPos);
         }
 
-        public void UpdateTitle()
+        string GetTitle(ProjectStorage project, int selIndex)
         {
-            string currentFile = Path.GetFileName(project.FileName);
+            string currentFile = "Untitled";
+            if (project.FileName != null) {
+                currentFile = Path.GetFileName(project.FileName);
+            }
             string star = "";
             if (project.UnsavedChanges) star = "*";
             int index = 0;
-            int count = 0;
+            int count = project.Subtitles.Count;
             double perc = 0.0;
 
-            if (editTrack != null && editTrack.Items.Count > 0 && listView.SelectedIndex != -1) {
-                index = listView.SelectedIndex + 1;
-                count = editTrack.Items.Count;
+            if (count > 0 && selIndex != -1) {
+                index = selIndex + 1;
+                count = project.Subtitles.Count;
                 perc = (double)index / count * 100;
             }
 
-            Title = $"{currentFile} {star} - {Local.PROGRAM_NAME} - {index}/{count} - {perc.ToString("N1")} %";
-        }
+            return $"{currentFile} {star} - {Local.PROGRAM_NAME} - {index}/{count} - {perc:N1} %";
+        }    
 
-        #endregion
-
-        #region Private Methods
-
-        void Track_ChunkUpdated(object sender, Chunk chunk)
+        void RecalculateIndexes(IList subtitles)
         {
-            project.SignalChange();
-            UpdateTitle();
-        }
-
-        void RestoreBackup()
-        {
-            if (!settings.SafelyExited && settings.LastProject != null) {
-                var lastProject = Path.GetFileName(settings.LastProject);
-                if (Dialogs.RestoreBackup(lastProject) == MessageBoxResult.Yes) {
-                    if (File.Exists(settings.LastProject + ".temp")) {
-                        try {
-                            OpenProject(settings.LastProject, true);
-                        }
-                        catch (Exception) {
-                            MessageBox.Show("error");
-                        }
-                    }
-                    else {
-                        try {
-                            OpenProject(settings.LastProject, false);
-                        }
-                        catch (Exception) {
-                            MessageBox.Show("error");
-                        }
-                    }
-                }
+            foreach (Subtitle subtitle in subtitles) {
+                subtitle.Index = subtitles.IndexOf(subtitle) + 1;                
             }
         }
 
-        void RecalculateIndexes()
+        IList SortByList(IList items, IList ordered) 
         {
-            foreach (Subtitle subtitle in editTrack.Items) {
-                subtitle.Index = editTrack.Items.IndexOf(subtitle) + 1;
-            }
-        }
-
-        List<Subtitle> SortAscendingByIndex(IList items)
-        {
-            var sl = new List<Subtitle>();
-            foreach (Subtitle subtitle in editTrack.Items)
+            IList sl = new List<object>();
+            foreach (var subtitle in ordered)
                 if (items.Contains(subtitle)) sl.Add(subtitle);
             return sl;
         }
 
-        void Merge(IList items, bool asDialog = false)
+        void Merge(IList items, IList collection, bool asDialog = false)
         {
             //because 'items' could be in wrong order, listview SelectedItems are in selection order
-            var sl = SortAscendingByIndex(items);
+            var sl = SortByList(items, collection);
 
             for (int i = 0; i < sl.Count-1; i++) {
-                Subtitle subtitle = sl[i];
-                Subtitle nextSub = sl[i+1];
+                var subtitle = (Subtitle)sl[i];
+                var nextSub = (Subtitle)sl[i+1];
                 //next subtitle is 'neighbor' to current subtitle
                 if (nextSub.Index == subtitle.Index + 1) {
                     subtitle.End = nextSub.End;
@@ -376,19 +373,57 @@ namespace SrtStudio
                     else
                         subtitle.Text = "-" + subtitle.Text + Environment.NewLine + "-" + nextSub.Text;
 
-                    editTrack.Items.Remove(nextSub);
-                    project.Subtitles.Remove(nextSub);
+                    collection.Remove(nextSub);
 
                     i++;
                 }
             }
-            RecalculateIndexes();
-
-            project.SignalChange();
+            RecalculateIndexes(project.Subtitles);
         }
-        #endregion
+
+        void UpdateSelection(Timeline timeline, IList removedItems, IList addedItems) {
+            foreach (Subtitle subtitle in removedItems) {
+                subtitle.TbxEnabled = false;
+                //subtitle.Selected = false;
+                timeline.SelectedItems.Remove(subtitle);
+            }
+
+            foreach (Subtitle subtitle in addedItems) {
+                subtitle.TbxEnabled = true;
+                //subtitle.Selected = true;
+                timeline.SelectedItems.Add(subtitle);
+            }
+        }
+
 
         #region Events
+        void Subtitles_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e) {
+            Debug.WriteLine("Subtitles_CollectionChanged");
+
+            SignalChange(project);
+        }
+
+        void Subtitle_PropertyChanged(object sender, PropertyChangedEventArgs e) {
+            var subtitle = (Subtitle)sender;
+            var position = timeline.Position;
+            if (position >= subtitle.Start && position <= subtitle.End) {
+                viewModel.ActiveItem = subtitle;
+            }
+            else viewModel.ActiveItem = null;
+
+
+            //Debug.WriteLine($"Sub_PropertyChanged {e.PropertyName}");
+            //Debug.WriteLine($"nameof {nameof(Subtitle.TbxEnabled)}");
+
+            if (e.PropertyName != nameof(Subtitle.TbxEnabled)) {                
+                SignalChange(project);
+            }
+        }
+
+        void WfHost_LayoutUpdated(object sender, EventArgs e) {
+            UpdateOverlay();
+        }
+
         void BakTimer_Tick(object sender, EventArgs e)
         {
             if (project.UnwrittenChanges) {
@@ -403,58 +438,58 @@ namespace SrtStudio
             }
         }
 
-        void Player_MediaFinished(object sender, EventArgs e)
-        {
-            player.Pause();
-            player.Position = player.Duration;
-        }
-
-        void MenuItemInsert_Click(object sender, RoutedEventArgs e)
-        {
-            Action_InsertNewSubtitle();
-        }
-
         void Timeline_NeedleMoved(object sender)
         {
             var timeline = (Timeline)sender;
             Seek(timeline.Position, timeline);
         }
 
+        void OnSelectionChanged() {
+            Debug.WriteLine("Selection changed");
+
+            Title = GetTitle(project, listView.SelectedIndex);
+        }
+
         void Timeline_SelectedItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (listView.SelectionMode == SelectionMode.Single) return;
             listView.SelectionChanged -= ListView_SelectionChanged;
+
             foreach (Subtitle subtitle in listView.SelectedItems) {
-                subtitle.Enabled = false;
+                subtitle.TbxEnabled = false;
             }
             listView.SelectedItems.Clear();
+
             foreach (Subtitle subtitle in timeline.SelectedItems) {
                 listView.SelectedItems.Add(subtitle);
-                subtitle.Enabled = true;
+                subtitle.TbxEnabled = true;
                 listView.ScrollIntoView(subtitle);
             }
+
+            OnSelectionChanged();
+
             listView.SelectionChanged += ListView_SelectionChanged;
         }
 
         void ListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            UpdateTimelineSelection(e.RemovedItems, e.AddedItems);
-            UpdateTitle();
-        }
+            var addedItems = e.AddedItems;
+            var removedItems = e.RemovedItems;
 
-        void UpdateTimelineSelection(IList removedItems, IList addedItems)
-        {
+            timeline.SelectedItems.CollectionChanged -= Timeline_SelectedItems_CollectionChanged;
+
             foreach (Subtitle subtitle in removedItems) {
-                subtitle.Enabled = false;
-                //subtitle.Selected = false;
+                subtitle.TbxEnabled = false;
                 timeline.SelectedItems.Remove(subtitle);
             }
 
             foreach (Subtitle subtitle in addedItems) {
-                subtitle.Enabled = true;
-                //subtitle.Selected = true;
+                subtitle.TbxEnabled = true;
                 timeline.SelectedItems.Add(subtitle);
             }
+
+            OnSelectionChanged();
+
+            timeline.SelectedItems.CollectionChanged += Timeline_SelectedItems_CollectionChanged;
         }
 
         void ListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -467,10 +502,10 @@ namespace SrtStudio
         }
         #endregion
 
+
         #region TextBox Events
         void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            Debug.WriteLine("textbox preview keydown");
             var textBox = (TextBox)sender;
             if (e.Key == Key.F4) {
                 Action_ShiftLineBreak(textBox);
@@ -479,7 +514,6 @@ namespace SrtStudio
 
             if (e.Key == Key.I && (Keyboard.Modifiers == ModifierKeys.Control)) {
                 Action_MakeSelectionItalic(textBox);
-                Debug.WriteLine("its italic time");
             }
         }
 
@@ -495,11 +529,6 @@ namespace SrtStudio
             var textBox = (TextBox)sender;
             var subtitle = (Subtitle)textBox.DataContext;
             subtitle.Text = textBox.Text;
-            if (subtitle == editTrack.ItemUnderNeedle) {
-                overlaySubs.Text = subtitle.Text;
-            }
-            project.SignalChange();
-            UpdateTitle();
         }
 
         void TextBox_IsEnabledChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -515,8 +544,9 @@ namespace SrtStudio
         }
         #endregion
 
+
         #region Player and player controls Events
-        void Button_Click(object sender, RoutedEventArgs e)
+        void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
             if (player.IsPlaying)
                 player.Pause();
@@ -539,13 +569,33 @@ namespace SrtStudio
                 }
             }));
         }
+
+        void Player_MediaFinished(object sender, EventArgs e) {
+            player.Pause();
+            player.Position = player.Duration;
+        }
+
+        void Player_MediaLoaded(object sender, EventArgs e) {
+            Dispatcher.BeginInvoke(new Action(() => {
+                var position = timeline.Position;
+
+                if (position > player.Duration) player.Position = player.Duration;
+                else player.Position = position;
+                //Seek(timeline.Position, timeline);
+
+                if (player.Duration.TotalSeconds != 0) {
+                    slider.Value = player.Position.TotalSeconds / player.Duration.TotalSeconds * 100;
+                }
+            }));
+            
+        }
         #endregion
+
 
         #region Menu Events
         void MenuProjectNew_Click(object sender, RoutedEventArgs e)
         {
             CloseProject();
-            editTrack.Items.Clear();
         }
 
         void MenuProjectOpen_Click(object sender, RoutedEventArgs e)
@@ -555,52 +605,27 @@ namespace SrtStudio
             };
             if (dialog.ShowDialog() == true && CloseProject()) {
                 Settings.Save(settings);
-                OpenProject(dialog.FileName);
+                project = OpenProject(dialog.FileName);
             }
         }
 
         void MenuProjectSave_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(project.FileName)) {
-                var dialog = new SaveFileDialog {
-                    AddExtension = true,
-                    DefaultExt = PROJ_EXT,
-                    Filter = PROJ_FILTER
-                };
-                if (dialog.ShowDialog() == true) {
-                    Project.Write(project, dialog.FileName);
-                    settings.LastProject = dialog.FileName;
-                    UpdateTitle();
-                }
-            }
-            else {
-                project.SelIndex = listView.SelectedIndex;
-                project.VideoPos = player.Position.TotalSeconds;
-                project.ScrollPos = timeline.svHor.HorizontalOffset;
-                Project.Write(project, project.FileName);
-                settings.LastProject = project.FileName;
-                UpdateTitle();
-            }
+            SaveOrSaveAs(project, settings);
+
+            Title = GetTitle(project, listView.SelectedIndex);
         }
 
         void MenuProjectSaveAs_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new SaveFileDialog {
-                AddExtension = true,
-                DefaultExt = PROJ_EXT,
-                Filter = PROJ_FILTER
-            };
-            if (dialog.ShowDialog() == true) {
-                Project.Write(project, dialog.FileName);
-                settings.LastProject = dialog.FileName;
-                UpdateTitle();
-            }
+            SaveAs(project, settings);
+
+            Title = GetTitle(project, listView.SelectedIndex);
         }
 
         void MenuProjectClose_Click(object sender, RoutedEventArgs e)
         {
             CloseProject();
-            editTrack.Items.Clear();
         }
 
         void MenuVideoOpen_Click(object sender, RoutedEventArgs e)
@@ -609,9 +634,9 @@ namespace SrtStudio
                 Filter = VIDEO_FILTER
             };
             if (dialog.ShowDialog() == true) {
-                player.Load(dialog.FileName);
+                player.Load(dialog.FileName);          
                 project.VideoPath = dialog.FileName;
-                playButton.IsEnabled = true;
+                btnPlay.IsEnabled = true;
                 slider.IsEnabled = true;
             }
         }
@@ -621,7 +646,7 @@ namespace SrtStudio
             player.Stop();
             player.PlaylistClear();
             project.VideoPath = null;
-            playButton.IsEnabled = false;
+            btnPlay.IsEnabled = false;
             slider.IsEnabled = false;
         }
 
@@ -633,7 +658,7 @@ namespace SrtStudio
             if (dialog.ShowDialog() == true) {
                 project.Subtitles = Srt.Read(dialog.FileName);
                 project.TrackName = dialog.SafeFileName;
-                LoadSubtitles(project.Subtitles, project.TrackName);
+                LoadSubtitles(project, timeline);
             }
         }
 
@@ -645,7 +670,7 @@ namespace SrtStudio
             if (dialog.ShowDialog() == true) {
                 project.RefSubtitles = Srt.Read(dialog.FileName);
                 project.RefTrackName = dialog.SafeFileName;
-                LoadRefSubtitles(project.RefSubtitles, project.RefTrackName);
+                LoadRefSubtitles(project, timeline);
             }
         }
 
@@ -675,67 +700,78 @@ namespace SrtStudio
         {
             Action_ShiftLineBreak(activeTextBox);
         }
+
+        void MenuOptionsRipple_Click(object sender, RoutedEventArgs e) {
+            //IsChecked reports value after click
+            //MessageBox.Show($"checked: {menuOptionsRipple.IsChecked}");
+            timeline.Ripple = menuOptionsRipple.IsChecked;
+        }
         #endregion
 
         #region Window Events
+        void Window_Loaded(object sender, RoutedEventArgs e) {
+            wfHost.LayoutUpdated += WfHost_LayoutUpdated;
+            LocationChanged += Window_LocationChanged;
+            airWindow.Owner = this;
+            airWindow.Show();
+        }
+
+        void Window_LocationChanged(object sender, EventArgs e) {
+            UpdateOverlay();
+        }
+
+        void SaveAs(ProjectStorage project, SettingsStorage settings) {
+            var dialog = new SaveFileDialog {
+                AddExtension = true,
+                DefaultExt = PROJ_EXT,
+                Filter = PROJ_FILTER,
+                FileName = Path.GetFileNameWithoutExtension(project.FileName),
+            };
+            if (dialog.ShowDialog() == true) {                
+                Project.Write(project, dialog.FileName);
+                settings.LastProject = dialog.FileName;                
+            }
+        }
+
+        void Save(ProjectStorage project, SettingsStorage settings) {
+            project.SelIndex = listView.SelectedIndex;
+            project.VideoPos = player.Position.TotalSeconds;
+            project.ScrollPos = timeline.HorizontalOffset;
+            
+            Project.Write(project, project.FileName);
+            settings.LastProject = project.FileName;            
+        }
+
+        void SaveOrSaveAs(ProjectStorage project, SettingsStorage settings) {
+            if (string.IsNullOrEmpty(project.FileName)) {                
+                SaveAs(project, settings);
+            }
+            else {
+                Save(project, settings);
+            }
+        }
+
         void Window_Closing(object sender, CancelEventArgs e)
         {
             if (project.UnsavedChanges) {
                 var projectFilename = Path.GetFileName(project.FileName);
-                var result = Dialogs.UnsavedChanges(projectFilename);
+                var result = Dialogs.SaveChanges(projectFilename);
                 if (result == MessageBoxResult.Cancel) {
                     e.Cancel = true;
                     return;
-                }
-                else if (result == MessageBoxResult.No) {
-                    if (WindowState == WindowState.Maximized) {
-                        settings.Maximized = true;
-                    }
-                }
+                }                
                 else if (result ==  MessageBoxResult.Yes) {
-                    if (string.IsNullOrEmpty(project.FileName)) {
-                        var dialog = new SaveFileDialog {
-                            AddExtension = true,
-                            DefaultExt = PROJ_EXT,
-                            Filter = PROJ_FILTER
-                        };
-                        if (dialog.ShowDialog() == true) {
-                            try {
-                                Project.Write(project, dialog.FileName);
-                                settings.LastProject = dialog.FileName;
-                            }
-                            catch (IOException ex) {
-                                MessageBox.Show(ex.Message, "error", MessageBoxButton.OK, MessageBoxImage.Error);
-                                e.Cancel = true;
-                                return;
-                            }
-                        }
-                    }
-                    else {
-                        project.SelIndex = listView.SelectedIndex;
-                        project.VideoPos = player.Position.TotalSeconds;
-                        project.ScrollPos = timeline.svHor.HorizontalOffset;
-                        try {
-                            Project.Write(project, project.FileName);
-                            settings.LastProject = project.FileName;
-                        }
-                        catch (IOException ex) {
-                            MessageBox.Show(ex.Message, "error", MessageBoxButton.OK, MessageBoxImage.Error);
-                            e.Cancel = true;
-                            return;
-                        }
-                    }
-                    if (WindowState == WindowState.Maximized) {
-                        settings.Maximized = true;
-                    }
-                    settings.SafelyExited = true;
-                    Settings.Save(settings);
+                    SaveOrSaveAs(project, settings);
                 }
             }
 
+            if (WindowState == WindowState.Maximized) {
+                settings.Maximized = true;
+            }
             settings.SafelyExited = true;
             Settings.Save(settings);
 
+            //????
             if (string.IsNullOrEmpty(project.FileName)) MessageBox.Show("empty project.filename");
             else {
                 var tempFile = project.FileName + ".temp";
@@ -743,8 +779,7 @@ namespace SrtStudio
             }
         }
 
-        void Window_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
+        void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
             switch (e.Key) {
                 case Key.F5:
                     Action_PlayPause();
@@ -764,14 +799,23 @@ namespace SrtStudio
                         Seek(-100.0);
                     break;
             }
+
+            if (e.Key == Key.O && e.KeyboardDevice.Modifiers == ModifierKeys.Control) {
+                var dialog = new OpenFileDialog {
+                    Filter = PROJ_FILTER
+                };
+                if (dialog.ShowDialog() == true && CloseProject()) {
+                    Settings.Save(settings);
+                    project = OpenProject(dialog.FileName);
+                }
+            }
+            else if (e.Key == Key.S && e.KeyboardDevice.Modifiers == ModifierKeys.Control) {
+                SaveOrSaveAs(project, settings);
+
+                Title = GetTitle(project, listView.SelectedIndex);
+            }
         }
 
-        void MenuOptionsRipple_Click(object sender, RoutedEventArgs e)
-        {
-            //IsChecked reports value after click
-            //MessageBox.Show($"checked: {menuOptionsRipple.IsChecked}");
-            timeline.Ripple = menuOptionsRipple.IsChecked;
-        }
         #endregion
 
         #region ACTIONS
@@ -821,48 +865,39 @@ namespace SrtStudio
                 if (dur < TimeSpan.FromSeconds(1.2)) {
                     MessageBox.Show("too short, correcting...");
                     subtitle.End = subtitle.Start + TimeSpan.FromSeconds(1.2);
-                    project.SignalChange();
                 }
                 else {
                     subtitle.End = timeline.Position;
-                    project.SignalChange();
                 }
             }
         }
 
         void Action_TrimEnd()
         {
-            Action_TrimEnd(editTrack.ItemUnderNeedle);
+            var underNeedle = GetItemUnderNeedle(timeline.Position, project.Subtitles);
+            Action_TrimEnd(underNeedle);
         }
 
         void Action_InsertNewSubtitle()
         {
-            Subtitle beforeNeedle = null;
-            for (int index = editTrack.Items.Count - 1; index >= 0; --index) {
-                if (player.Position >= editTrack.Items[index].Start) {
-                    beforeNeedle = editTrack.Items[index];
-                    break;
-                }
-            }
+            Subtitle beforeNeedle = FindSubtitleBefore(timeline.Position, project.Subtitles);
             if (beforeNeedle != null) {
                 var sub = new Subtitle() {
-                    Start = player.Position,
-                    End = player.Position + TimeSpan.FromSeconds(1.5),
+                    Start = timeline.Position,
+                    End = timeline.Position + TimeSpan.FromSeconds(1.5),
                     Text = string.Empty
                 };
                 project.Subtitles.Insert(beforeNeedle.Index, sub);
+                //viewModel.Items.Insert(beforeNeedle.Index, sub);
 
-                var subtitle = new Subtitle();
-                editTrack.Items.Insert(beforeNeedle.Index, subtitle);
-                RecalculateIndexes();
+                //viewModel.Items =  project.Subtitles;
 
-                timeline.SelectedItems.Add(subtitle);
+                RecalculateIndexes(project.Subtitles);
+
+                timeline.SelectedItems.Add(sub);
                 listView.SelectedItems.Clear();
 
-                listView.SelectedItems.Add(subtitle);
-                //subtitle.Selected = true;
-
-                project.SignalChange();
+                listView.SelectedItems.Add(sub);
             }
         }
         #endregion
@@ -873,14 +908,14 @@ namespace SrtStudio
         {
             if (listView.SelectedItems.Count <= 1) return;
 
-            Merge(listView.SelectedItems);
+            Merge(listView.SelectedItems, project.Subtitles);
         }
 
         void MenuItemMergeDialog_Click(object sender, RoutedEventArgs e)
         {
             if (listView.SelectedItems.Count <= 1) return;
 
-            Merge(listView.SelectedItems, true);
+            Merge(listView.SelectedItems, project.Subtitles, true);
         }
 
         void MenuItemDelete_Click(object sender, RoutedEventArgs e)
@@ -889,15 +924,16 @@ namespace SrtStudio
             foreach (Subtitle subtitle in listView.SelectedItems) copy.Add(subtitle);
 
             foreach (Subtitle subtitle in copy) {
-                editTrack.Items.Remove(subtitle);
                 project.Subtitles.Remove(subtitle);
-                editTrack.Items.Remove(subtitle);
             }
-            RecalculateIndexes();
-            project.SignalChange();
+            RecalculateIndexes(project.Subtitles);
         }
 
-        void PrepareContextMenu(Subtitle subtitle, ContextMenu contextMenu)
+        void MenuItemInsert_Click(object sender, RoutedEventArgs e) {
+            Action_InsertNewSubtitle();
+        }
+
+        void PrepareContextMenu(Subtitle subtitle, ContextMenu contextMenu, IList selectedItems)
         {
             var merge = (MenuItem)contextMenu.Items[0];
             var mergeDialog = (MenuItem)contextMenu.Items[1];
@@ -905,9 +941,9 @@ namespace SrtStudio
             merge.IsEnabled = false;
             mergeDialog.IsEnabled = false;
             delete.IsEnabled = false;
-            if (!listView.SelectedItems.Contains(subtitle))
+            if (!selectedItems.Contains(subtitle))
                 return;
-            int count = listView.SelectedItems.Count;
+            int count = selectedItems.Count;
             if (count >= 1)
                 delete.IsEnabled = true;
             if (count >= 2) {
@@ -921,7 +957,7 @@ namespace SrtStudio
             var lvItem = (ListViewItem)sender;
             var subtitle = (Subtitle)lvItem.DataContext;
             ContextMenu contextMenu = lvItem.ContextMenu;
-            PrepareContextMenu(subtitle, contextMenu);
+            PrepareContextMenu(subtitle, contextMenu, listView.SelectedItems);
         }
 
         void Track_ChunkContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -930,19 +966,9 @@ namespace SrtStudio
             var chunk = (Chunk)sender;
             var subtitle = (Subtitle)chunk.DataContext;
             ContextMenu contextMenu = chunk.ContextMenu;
-            PrepareContextMenu(subtitle, contextMenu);
+            PrepareContextMenu(subtitle, contextMenu, listView.SelectedItems);
         }
         #endregion
-
-        void ListView_TextInput(object sender, TextCompositionEventArgs e)
-        {
-            Debug.WriteLine("text input");
-        }
-
-        void ListViewItem_TextInput(object sender, TextCompositionEventArgs e)
-        {
-            Debug.WriteLine("item text input");
-        }
 
     }
 }

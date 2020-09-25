@@ -5,7 +5,7 @@ namespace SrtStudio
 {
     public class Dialogs
     {
-        public static MessageBoxResult UnsavedChanges(string projectFilename)
+        public static MessageBoxResult SaveChanges(string projectFilename)
         {
             var result =
                 MessageBox.Show(
