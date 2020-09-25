@@ -8,7 +8,8 @@ using System.Xml.Serialization;
 
 namespace SrtStudio
 {
-    public class ProjectStorage
+    [XmlRoot("ProjectStorage")]
+    public class Project
     {
         public string VideoPath { get; set; } = "";
         public string TrackName { get; set; } = "";
@@ -31,30 +32,21 @@ namespace SrtStudio
             UnsavedChanges = true;
             UnwrittenChanges = true;
         }
-    }
 
-    public static class Project
-    {
-        /// <summary>
-        /// Full path
-        /// </summary>
-
-
-        public static ProjectStorage Read(string filename, bool asBackup = false)
-        {
+        public static Project Read(string filename, bool asBackup = false) {
             if (filename == null) throw new ArgumentNullException(nameof(filename));
 
-            ProjectStorage project = null;
-            var ser = new XmlSerializer(typeof(ProjectStorage));
+            Project project = null;
+            var ser = new XmlSerializer(typeof(Project));
 
             using (FileStream stream = File.OpenRead(asBackup ? filename+".temp" : filename)) {
                 using (var zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
-                    project = ser.Deserialize(zipStream) as ProjectStorage;                    
+                    project = ser.Deserialize(zipStream) as Project;
                 }
             }
 
             if (project == null) {
-                project = new ProjectStorage();
+                project = new Project();
             }
             else {
                 project.FileName = filename;
@@ -63,11 +55,6 @@ namespace SrtStudio
             return project;
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="filename"></param>
-        /// <param name="asBackup"></param>
         /// <exception cref="UnauthorizedAccessException"></exception>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
@@ -76,23 +63,17 @@ namespace SrtStudio
         /// <exception cref="IOException"></exception>
         /// <exception cref="NotSupportedException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public static void Write(ProjectStorage project, string filename, bool asBackup = false)
-        {
-            if (project == null) throw new ArgumentNullException(nameof(project));
-            if (filename == null) throw new ArgumentNullException(nameof(filename));
-
-            var ser = new XmlSerializer(typeof(ProjectStorage));
+        public void Write(bool asBackup = false) {
+            string filename = FileName;
+            var ser = new XmlSerializer(typeof(Project));
 
             using (FileStream stream = File.Create(asBackup ? filename + ".temp" : filename)) {
                 using (var zipStream = new GZipStream(stream, CompressionMode.Compress)) {
-                    ser.Serialize(zipStream, project);
-                    project.FileName = filename;
-                    if (!asBackup) project.UnsavedChanges = false;
-                    project.UnwrittenChanges = false;
+                    ser.Serialize(zipStream, this);
+                    if (!asBackup) UnsavedChanges = false;
+                    UnwrittenChanges = false;
                 }
             }
         }
-
-
     }
 }

@@ -33,7 +33,7 @@ namespace SrtStudio
         readonly AirWindow airWindow = new AirWindow();
 
         SettingsStorage settings;
-        ProjectStorage project;
+        Project project;
 
         const string SRT_FILTER = "Srt - SubRip(*.srt)|*.srt";
         const string PROJ_EXT = "sprj";
@@ -75,6 +75,9 @@ namespace SrtStudio
 
             InitTimeline(timeline);
 
+            LoadSubtitles(project, timeline);
+            LoadRefSubtitles(project, timeline);
+
             playerGrid.Children.Remove(overlayGrid);
             airWindow.contentGrid.Children.Add(overlayGrid);
 
@@ -108,11 +111,11 @@ namespace SrtStudio
 
                 var refTrack = new Track(timeline, true) {
                     Height = 50,
-                    Name = ""
-                };
+                    Name = "",
+                };                
 
                 var editTrack = new Track(timeline, false) {
-                    Name = ""
+                    Name = "",
                 };
 
                 timeline.Tracks.Add(refTrack);
@@ -133,7 +136,7 @@ namespace SrtStudio
             }
         }
 
-        ProjectStorage OpenProject(string filename, bool asBackup = false) {
+        Project OpenProject(string filename, bool asBackup = false) {
             var project = Project.Read(filename, asBackup);
             settings.LastProject = filename;
             Title = GetTitle(project, project.SelIndex);
@@ -166,8 +169,8 @@ namespace SrtStudio
             return project;
         }
 
-        ProjectStorage RestoreBackup(SettingsStorage settings) {
-            ProjectStorage project = null;
+        Project RestoreBackup(SettingsStorage settings) {
+            Project project = null;
             if (!settings.SafelyExited && settings.LastProject != null) {
                 var lastProject = Path.GetFileName(settings.LastProject);
                 if (Dialogs.RestoreBackup(lastProject) == MessageBoxResult.Yes) {
@@ -189,11 +192,11 @@ namespace SrtStudio
                     }
                 }
             }
-            if (project == null) project = new ProjectStorage();
+            if (project == null) project = new Project();
             return project;
         }
 
-        void LoadSubtitles(ProjectStorage project, Timeline timeline) {
+        void LoadSubtitles(Project project, Timeline timeline) {
             var editTrack = timeline.Tracks[1];
 
             viewModel.Items = project.Subtitles;
@@ -207,7 +210,7 @@ namespace SrtStudio
             }
         }
 
-        void LoadRefSubtitles(ProjectStorage project, Timeline timeline) {
+        void LoadRefSubtitles(Project project, Timeline timeline) {
             var refTrack = timeline.Tracks[0];
             refTrack.Items = project.RefSubtitles;
             refTrack.Name = project.RefTrackName;
@@ -231,7 +234,7 @@ namespace SrtStudio
 
             player.Stop();
             player.PlaylistClear();
-            project = new ProjectStorage();
+            project = new Project();
             viewModel.Items = project.Subtitles;
             viewModel.ActiveItem = null;
             Title = GetTitle(project, listView.SelectedIndex);
@@ -250,7 +253,7 @@ namespace SrtStudio
             }            
         }      
 
-        void SignalChange(ProjectStorage project) {
+        void SignalChange(Project project) {
             project.SignalChange();
             Title = GetTitle(project, listView.SelectedIndex);
         }
@@ -321,7 +324,7 @@ namespace SrtStudio
             Seek(newPos);
         }
 
-        string GetTitle(ProjectStorage project, int selIndex)
+        string GetTitle(Project project, int selIndex)
         {
             string currentFile = "Untitled";
             if (project.FileName != null) {
@@ -429,7 +432,7 @@ namespace SrtStudio
             if (project.UnwrittenChanges) {
                 try {
                     Debug.WriteLine("saving backup...");
-                    Project.Write(project, project.FileName, true);
+                    project.Write(asBackup: true);
                     settings.LastProject = project.FileName;
                 }
                 catch (IOException) {
@@ -720,29 +723,29 @@ namespace SrtStudio
             UpdateOverlay();
         }
 
-        void SaveAs(ProjectStorage project, SettingsStorage settings) {
+        void SaveAs(Project project, SettingsStorage settings) {
             var dialog = new SaveFileDialog {
                 AddExtension = true,
                 DefaultExt = PROJ_EXT,
                 Filter = PROJ_FILTER,
                 FileName = Path.GetFileNameWithoutExtension(project.FileName),
             };
-            if (dialog.ShowDialog() == true) {                
-                Project.Write(project, dialog.FileName);
+            if (dialog.ShowDialog() == true) {
+                project.Write();
                 settings.LastProject = dialog.FileName;                
             }
         }
 
-        void Save(ProjectStorage project, SettingsStorage settings) {
+        void Save(Project project, SettingsStorage settings) {
             project.SelIndex = listView.SelectedIndex;
             project.VideoPos = player.Position.TotalSeconds;
             project.ScrollPos = timeline.HorizontalOffset;
-            
-            Project.Write(project, project.FileName);
+
+            project.Write();
             settings.LastProject = project.FileName;            
         }
 
-        void SaveOrSaveAs(ProjectStorage project, SettingsStorage settings) {
+        void SaveOrSaveAs(Project project, SettingsStorage settings) {
             if (string.IsNullOrEmpty(project.FileName)) {                
                 SaveAs(project, settings);
             }
@@ -881,24 +884,25 @@ namespace SrtStudio
         void Action_InsertNewSubtitle()
         {
             Subtitle beforeNeedle = FindSubtitleBefore(timeline.Position, project.Subtitles);
-            if (beforeNeedle != null) {
-                var sub = new Subtitle() {
-                    Start = timeline.Position,
-                    End = timeline.Position + TimeSpan.FromSeconds(1.5),
-                    Text = string.Empty
-                };
-                project.Subtitles.Insert(beforeNeedle.Index, sub);
-                //viewModel.Items.Insert(beforeNeedle.Index, sub);
+            var sub = new Subtitle() {
+                Start = timeline.Position,
+                End = timeline.Position + TimeSpan.FromSeconds(1.5),
+                Text = string.Empty
+            };            
 
-                //viewModel.Items =  project.Subtitles;
-
-                RecalculateIndexes(project.Subtitles);
-
-                timeline.SelectedItems.Add(sub);
-                listView.SelectedItems.Clear();
-
-                listView.SelectedItems.Add(sub);
+            if (beforeNeedle == null) {
+                project.Subtitles.Insert(0, sub);
             }
+            else {
+                project.Subtitles.Insert(beforeNeedle.Index, sub);
+            }
+
+            RecalculateIndexes(project.Subtitles);
+
+            timeline.SelectedItems.Add(sub);
+
+            listView.SelectedItems.Clear();
+            listView.SelectedItems.Add(sub);
         }
         #endregion
 
