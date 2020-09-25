@@ -8,6 +8,7 @@ using System.Xml.Serialization;
 
 namespace SrtStudio
 {
+    [Serializable]
     [XmlRoot("ProjectStorage")]
     public class Project
     {

@@ -32,7 +32,7 @@ namespace SrtStudio
         TextBox activeTextBox;
         readonly AirWindow airWindow = new AirWindow();
 
-        SettingsStorage settings;
+        Settings settings;
         Project project;
 
         const string SRT_FILTER = "Srt - SubRip(*.srt)|*.srt";
@@ -58,7 +58,7 @@ namespace SrtStudio
 
             OverrideLanguage();                       
 
-            settings = Settings.Load();
+            settings = Settings.Read();
             if (settings.Maximized) {
                 WindowState = WindowState.Maximized;
             }
@@ -68,7 +68,7 @@ namespace SrtStudio
 
             if (settings.SafelyExited) {
                 settings.SafelyExited = false;
-                Settings.Save(settings);
+                settings.Write();
             }
 
             Title = GetTitle(project, listView.SelectedIndex);
@@ -169,7 +169,7 @@ namespace SrtStudio
             return project;
         }
 
-        Project RestoreBackup(SettingsStorage settings) {
+        Project RestoreBackup(Settings settings) {
             Project project = null;
             if (!settings.SafelyExited && settings.LastProject != null) {
                 var lastProject = Path.GetFileName(settings.LastProject);
@@ -607,7 +607,7 @@ namespace SrtStudio
                 Filter = PROJ_FILTER
             };
             if (dialog.ShowDialog() == true && CloseProject()) {
-                Settings.Save(settings);
+                settings.Write();
                 project = OpenProject(dialog.FileName);
             }
         }
@@ -723,7 +723,7 @@ namespace SrtStudio
             UpdateOverlay();
         }
 
-        void SaveAs(Project project, SettingsStorage settings) {
+        void SaveAs(Project project, Settings settings) {
             var dialog = new SaveFileDialog {
                 AddExtension = true,
                 DefaultExt = PROJ_EXT,
@@ -736,7 +736,7 @@ namespace SrtStudio
             }
         }
 
-        void Save(Project project, SettingsStorage settings) {
+        void Save(Project project, Settings settings) {
             project.SelIndex = listView.SelectedIndex;
             project.VideoPos = player.Position.TotalSeconds;
             project.ScrollPos = timeline.HorizontalOffset;
@@ -745,7 +745,7 @@ namespace SrtStudio
             settings.LastProject = project.FileName;            
         }
 
-        void SaveOrSaveAs(Project project, SettingsStorage settings) {
+        void SaveOrSaveAs(Project project, Settings settings) {
             if (string.IsNullOrEmpty(project.FileName)) {                
                 SaveAs(project, settings);
             }
@@ -768,11 +768,9 @@ namespace SrtStudio
                 }
             }
 
-            if (WindowState == WindowState.Maximized) {
-                settings.Maximized = true;
-            }
+            settings.Maximized = WindowState == WindowState.Maximized;            
             settings.SafelyExited = true;
-            Settings.Save(settings);
+            settings.Write();
 
             //????
             if (string.IsNullOrEmpty(project.FileName)) MessageBox.Show("empty project.filename");
@@ -808,7 +806,7 @@ namespace SrtStudio
                     Filter = PROJ_FILTER
                 };
                 if (dialog.ShowDialog() == true && CloseProject()) {
-                    Settings.Save(settings);
+                    settings.Write();
                     project = OpenProject(dialog.FileName);
                 }
             }
