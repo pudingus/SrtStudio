@@ -24,7 +24,6 @@ namespace SrtStudio
                 VerticalAlignment = VerticalAlignment.Stretch
             };
             Locked = locked;
-            ChunkUpdated += Track_ChunkUpdated;
             Items.CollectionChanged += Items_CollectionChanged;
 
             TrackHeader.resizeBorder.MouseMove += Header_ResizeBorder_MouseMove;
@@ -35,7 +34,6 @@ namespace SrtStudio
         public delegate void ChunkUpdatedEventHandler(object sender, Chunk chunk);
 
         public event ContextMenuEventHandler ChunkContextMenuOpening;
-        public event ChunkUpdatedEventHandler ChunkUpdated;
 
         readonly List<Subtitle> streamedItems = new List<Subtitle>();
         ObservableCollection<Subtitle> items = new ObservableCollection<Subtitle>();
@@ -108,8 +106,9 @@ namespace SrtStudio
         }
 
         void CreateChunk(Subtitle subtitle) {
-            var chunk = new Chunk(subtitle) {
-                ContextMenu = ParentTimeline.ChunkContextMenu
+            var chunk = new Chunk() {
+                ContextMenu = ParentTimeline.ChunkContextMenu,
+                DataContext = subtitle
             };
             subtitle.Chunk = chunk;
 
@@ -149,10 +148,9 @@ namespace SrtStudio
 
         void MoveSubtitle(Subtitle subtitle, TimeSpan timeDelta) {
             subtitle.Start += timeDelta;
-            subtitle.End += timeDelta;
         }
 
-        void TryResizeChunk(Chunk chunk, ChunkBorder chunkBorder) {
+        void TryResizeChunk(Subtitle subtitle, ChunkBorder chunkBorder) {
             Point position = Mouse.GetPosition(ParentTimeline.headerStack);
             double deltax = position.X - prevPos.X;
             double startdeltax = position.X - startPos.X;
@@ -166,11 +164,13 @@ namespace SrtStudio
 
             if (isEditingChunk) {
                 if (chunkBorder == ChunkBorder.Start) {
-                    ResizeChunk(chunk, -deltax, deltax);
+                    subtitle.Start += ParentTimeline.PixelsToTime(deltax);
+                    subtitle.Duration += ParentTimeline.PixelsToTime(-deltax);
+
                 }
 
                 else if (chunkBorder == ChunkBorder.End) {
-                    ResizeChunk(chunk, deltax, 0);
+                    subtitle.Duration += ParentTimeline.PixelsToTime(deltax);
                 }
 
                 //user is moving his mouse after he clicked in the middle of a chunk
@@ -181,17 +181,17 @@ namespace SrtStudio
                             //find lowest index
                             int min = FindLowestIndex(items, Items);
                             for (int i = min; i < Items.Count; i++) {
-                                var subtitle = Items[i];
+                                var sub = Items[i];
                                 //cant modify chunks directly, coz they might not be streamed in
                                 var timeDelta = ParentTimeline.PixelsToTime(deltax);
-                                MoveSubtitle(subtitle, timeDelta);
+                                MoveSubtitle(sub, timeDelta);
                             }
                         }
                         else {
-                            foreach (Subtitle subtitle in items) {
+                            foreach (Subtitle sub in items) {
                                 //cant modify chunks directly, coz they might not be streamed in
                                 var timeDelta = ParentTimeline.PixelsToTime(deltax);
-                                MoveSubtitle(subtitle, timeDelta);
+                                MoveSubtitle(sub, timeDelta);
                             }
                         }
                     }
@@ -208,17 +208,6 @@ namespace SrtStudio
             if (margin > 0 && width > 0) {
                 subtitle.Chunk.Margin = new Thickness(margin, 0, 0, 0);
                 subtitle.Chunk.Width = width;
-            }
-        }
-
-        void ResizeChunk(Chunk chunk, double addWidth, double addLeftMargin) {
-            var width = chunk.Width + addWidth;
-            var margin = chunk.Margin.Left + addLeftMargin;
-
-            if (width > 0 && margin > 0) {
-                chunk.Width = width;
-                chunk.Margin = new Thickness(margin, 0, 0, 0);
-                ChunkUpdated?.Invoke(this, chunk);
             }
         }
 
@@ -268,7 +257,7 @@ namespace SrtStudio
         void MiddleBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             var border = (Border)sender;           
-            var chunk = (Chunk)border.DataContext;
+            var subtitle = (Subtitle)border.DataContext;
 
             var ctrlPressed = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
 
@@ -277,25 +266,19 @@ namespace SrtStudio
                 startPos = e.GetPosition(ParentTimeline.headerStack);
                 border.CaptureMouse();
 
-                //if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) {
-
-                // ParentTimeline.SelectedItems.Clear();
-                //}
-                //ParentTimeline.SelectedItems.Add(chunk.Subtitle);
-
                 if (!isEditingChunk) {
                     if (ctrlPressed) {
-                        if (ParentTimeline.SelectedItems.Contains(chunk.Subtitle)) {
-                            ParentTimeline.SelectedItems.Remove(chunk.Subtitle);
+                        if (ParentTimeline.SelectedItems.Contains(subtitle)) {
+                            ParentTimeline.SelectedItems.Remove(subtitle);
                         }
                         else {
-                            ParentTimeline.SelectedItems.Add(chunk.Subtitle);
+                            ParentTimeline.SelectedItems.Add(subtitle);
                         }
                     }
                     else {
-                        if (!ParentTimeline.SelectedItems.Contains(chunk.Subtitle)) {
+                        if (!ParentTimeline.SelectedItems.Contains(subtitle)) {
                             ParentTimeline.SelectedItems.Clear();
-                            ParentTimeline.SelectedItems.Add(chunk.Subtitle);
+                            ParentTimeline.SelectedItems.Add(subtitle);
                         }
                     }                    
                 }
@@ -305,7 +288,7 @@ namespace SrtStudio
                 afterDblClick = true; //e.Handled is not enough
                 isEditingChunk = false;
 
-                ParentTimeline.SnapNeedleToChunkStart(chunk);
+                ParentTimeline.Position = subtitle.Start;
             }
         }
 
@@ -322,8 +305,8 @@ namespace SrtStudio
             border.ReleaseMouseCapture();
             e.Handled = true;
             if (!isEditingChunk) {
-                var chunk = (Chunk)border.DataContext;
-                ParentTimeline.SnapNeedleToChunkStart(chunk);
+                var subtitle = (Subtitle)border.DataContext;
+                ParentTimeline.Position = subtitle.Start;
             }
             isEditingChunk = false;
         }
@@ -331,24 +314,16 @@ namespace SrtStudio
         void MiddleBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             var border = (Border)sender;
-            var chunk = (Chunk)border.DataContext;
             var ctrlPressed = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
 
             //stop routing the event to timeline mouseup, which puts needle under cursor
             //so we can put it there ourselves when needed
             e.Handled = true;
 
-            //if (!isEditingChunk) {                
-            //    if (!ctrlPressed) {
-            //        ParentTimeline.SelectedItems.Clear();
-            //    }
-            //    ParentTimeline.SelectedItems.Add(chunk.Subtitle);
-            //}
 
             if (!isEditingChunk && !afterDblClick && !ctrlPressed) {
                 ParentTimeline.SnapNeedleToCursor();
             }
-
 
             if (afterDblClick) {
                 afterDblClick = false;
@@ -362,11 +337,11 @@ namespace SrtStudio
         void EndBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             var border = (Border)sender;
-            var chunk = (Chunk)border.DataContext;
+            var subtitle = (Subtitle)border.DataContext;
             border.ReleaseMouseCapture();
             e.Handled = true;
             if (!isEditingChunk) {  
-                ParentTimeline.SnapNeedleToChunkEnd(chunk);
+                ParentTimeline.Position = subtitle.End;
             }
             isEditingChunk = false;
         }
@@ -374,27 +349,27 @@ namespace SrtStudio
         void StartBorder_MouseMove(object sender, MouseEventArgs e)
         {
             var border = (Border)sender;
-            var chunk = (Chunk)border.DataContext;
+            var subtitle = (Subtitle)border.DataContext;
             if (e.LeftButton == MouseButtonState.Pressed && border.IsMouseCaptured) {
-                TryResizeChunk(chunk, ChunkBorder.Start);
+                TryResizeChunk(subtitle, ChunkBorder.Start);
             }
         }
 
         void MiddleBorder_MouseMove(object sender, MouseEventArgs e)
         {
             var border = (Border)sender;
-            var chunk = (Chunk)border.DataContext;
+            var subtitle = (Subtitle)border.DataContext;
             if (e.LeftButton == MouseButtonState.Pressed && border.IsMouseCaptured) {
-                TryResizeChunk(chunk, ChunkBorder.Middle);
+                TryResizeChunk(subtitle, ChunkBorder.Middle);
             }            
         }
 
         void EndBorder_MouseMove(object sender, MouseEventArgs e)
         {
             var border = (Border)sender;
-            var chunk = (Chunk)border.DataContext;
+            var subtitle = (Subtitle)border.DataContext;
             if (e.LeftButton == MouseButtonState.Pressed && border.IsMouseCaptured) {
-                TryResizeChunk(chunk, ChunkBorder.End);
+                TryResizeChunk(subtitle, ChunkBorder.End);
             }
         }
 
@@ -404,24 +379,11 @@ namespace SrtStudio
             SetMinWidth();
         }
 
-        void Track_ChunkUpdated(object sender, Chunk chunk)
-        {
-            var subtitle = (Subtitle)chunk.DataContext;
-
-            //correct values in 'subtitle'
-            subtitle.Start = ParentTimeline.PixelsToTime(chunk.Margin.Left);
-            var dur = ParentTimeline.PixelsToTime(chunk.Width);
-            subtitle.End = subtitle.Start + dur;
-        }
-
         void Subtitle_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             var subtitle = (Subtitle)sender;
 
             switch (e.PropertyName) {
-                //case nameof(subtitle.Selected):
-                //    subtitle.Chunk.selBorder.Visibility = subtitle.Selected ? Visibility.Visible : Visibility.Hidden;
-                //    break;
                 case nameof(subtitle.Start):
                 case nameof(subtitle.Duration):
                     UpdateChunkForSubtitle(subtitle);

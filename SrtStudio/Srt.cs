@@ -76,7 +76,7 @@ namespace SrtStudio
                         if (line.Length >= 12) {
                             if (IsTimecode(line)) {
                                 found = true;
-                                subtitle.End = ParseTimecode(line);
+                                subtitle.Duration = ParseTimecode(line) - subtitle.Start;
                                 line = line.Remove(0, 12);
                                 mode = 1;
                             }

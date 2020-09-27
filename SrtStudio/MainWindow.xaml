@@ -132,7 +132,7 @@
 
         <Menu Height="25" VerticalAlignment="Top" Background="#FF343434">
             <MenuItem Header="Project" Foreground="White">
-                <MenuItem x:Name="menuProjectNew" Header="New" Foreground="Black" Click="MenuProjectNew_Click"/>
+                <MenuItem x:Name="menuProjectNew" Header="New" InputGestureText="Ctrl+N" Foreground="Black" Click="MenuProjectNew_Click"/>
                 <MenuItem x:Name="menuProjectOpen" Header="Open..." InputGestureText="Ctrl+O" Foreground="Black" Click="MenuProjectOpen_Click"/>
                 <MenuItem x:Name="menuProjectSave" Header="Save" InputGestureText="Ctrl+S" Foreground="Black" Click="MenuProjectSave_Click"/>
                 <MenuItem x:Name="menuProjectSaveAs" Header="Save as..." Foreground="Black" Click="MenuProjectSaveAs_Click" />

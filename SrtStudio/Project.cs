@@ -4,10 +4,16 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Xml;
 using System.Xml.Serialization;
 
 namespace SrtStudio
 {
+    public interface IBackwardCompatibilitySerializer
+    {
+        void OnUnknownElementFound(string unknownName, string value);
+    }
+
     [Serializable]
     [XmlRoot("ProjectStorage")]
     public class Project
@@ -39,6 +45,7 @@ namespace SrtStudio
 
             Project project = null;
             var ser = new XmlSerializer(typeof(Project));
+            ser.UnknownAttribute += Ser_UnknownAttribute;
 
             using (FileStream stream = File.OpenRead(asBackup ? filename+".temp" : filename)) {
                 using (var zipStream = new GZipStream(stream, CompressionMode.Decompress)) {
@@ -54,6 +61,13 @@ namespace SrtStudio
                 if (asBackup) project.UnsavedChanges = true;
             }
             return project;
+        }
+
+        private static void Ser_UnknownAttribute(object sender, XmlAttributeEventArgs e) {
+            //credits to someone stackoverflow
+            var deserializedObj = (e.ObjectBeingDeserialized as IBackwardCompatibilitySerializer);
+            if (deserializedObj == null) return;
+            deserializedObj.OnUnknownElementFound(e.Attr.Name, e.Attr.InnerText);
         }
 
         /// <exception cref="UnauthorizedAccessException"></exception>

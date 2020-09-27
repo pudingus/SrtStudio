@@ -14,16 +14,11 @@ namespace SrtStudio
         bool selected;
         readonly BrushConverter bc = new BrushConverter();
 
-        public Chunk(Subtitle subtitle)
+        public Chunk()
         {
-            DataContext = subtitle;
-            Subtitle = subtitle;
             InitializeComponent();
             hilitBorder.Visibility = Visibility.Hidden;
             selBorder.Visibility = Visibility.Hidden;
-            endBorder.DataContext = this;
-            startBorder.DataContext = this;
-            middleBorder.DataContext = this;
         }
 
         public bool Locked {
@@ -59,7 +54,6 @@ namespace SrtStudio
             }
         }
 
-        public Subtitle Subtitle { get; }
 
         void Chunk_SizeChanged(object sender, SizeChangedEventArgs e)
         {

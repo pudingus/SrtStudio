@@ -58,16 +58,6 @@ namespace SrtStudio
             NeedleMoved?.Invoke(this);
         }
 
-        public void SnapNeedleToChunkEnd(Chunk chunk) {
-            needle.Margin = new Thickness(chunk.Margin.Left + chunk.Width, 0, 0, 0);
-            NeedleMoved?.Invoke(this);
-        }
-
-        public void SnapNeedleToChunkStart(Chunk chunk) {
-            needle.Margin = new Thickness(chunk.Margin.Left, 0, 0, 0);
-            NeedleMoved?.Invoke(this);
-        }
-
         public TimeSpan PixelsToTime(double pixels) {
             var pixelscale = Pixelscale;
             var timescale = Timescale;
